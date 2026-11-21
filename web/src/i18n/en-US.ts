@@ -1,0 +1,30 @@
+/** English copy; keep keys in sync with zh-CN.ts */
+export default {
+  app: { name: 'Modernchat SSO' },
+  auth: {
+    welcomeBack: 'Welcome back',
+    login: 'Sign in',
+    register: 'Sign up',
+    registered: 'Signed up and logged in',
+    username: 'Username',
+    password: 'Password',
+    confirmPassword: 'Confirm password',
+    nickname: 'Nickname (optional)',
+    email: 'Email (optional)',
+    required: 'Required',
+    usernameMax: 'Username must be 20 characters or fewer',
+    passwordLen: 'Password must be 6–72 characters',
+    pwdMismatch: 'Passwords do not match',
+    emailInvalid: 'Invalid email address',
+    failed: 'Something went wrong, please retry',
+    toRegister: 'No account? Sign up',
+    toLogin: 'Already have an account? Sign in',
+  },
+  home: {
+    title: 'Current session',
+    logout: 'Sign out',
+    loggedOut: 'Signed out',
+    noEmail: 'No email bound',
+    hint: 'Issued JWTs are mutually trusted with the main Modernchat app via a shared secret.',
+  },
+}

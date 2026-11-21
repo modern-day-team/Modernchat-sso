@@ -1,0 +1,97 @@
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { Button as TButton, MessagePlugin } from 'tdesign-vue-next'
+
+import { useAuthStore } from '@/stores/auth'
+
+const { t } = useI18n()
+const router = useRouter()
+const auth = useAuthStore()
+
+// 进入门户即拉取最新资料；401 由 client 统一清理并带回登录页
+onMounted(() => {
+  void auth.fetchMe()
+})
+
+async function onLogout() {
+  await auth.logout()
+  MessagePlugin.success(t('home.loggedOut'))
+  void router.push('/login')
+}
+</script>
+
+<template>
+  <main class="auth-card">
+    <h1 class="auth-card__title">{{ t('home.title') }}</h1>
+    <div class="home-user">
+      <span class="home-user__avatar" :style="{ background: auth.user?.avatarColor }">
+        {{ auth.user?.nickname?.slice(0, 1) || '?' }}
+      </span>
+      <div class="home-user__meta">
+        <div class="home-user__name">{{ auth.user?.nickname }}（@{{ auth.user?.username }}）</div>
+        <div class="home-user__sub">{{ auth.user?.email || t('home.noEmail') }} · {{ auth.user?.role }}</div>
+      </div>
+    </div>
+    <p class="home-hint">{{ t('home.hint') }}</p>
+    <TButton theme="danger" variant="outline" block @click="onLogout">
+      {{ t('home.logout') }}
+    </TButton>
+  </main>
+</template>
+
+<style scoped>
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--td-bg-color-container);
+  border: 1px solid var(--mc-hairline);
+  border-radius: var(--td-radius-large);
+  padding: 32px 28px;
+}
+
+.auth-card__title {
+  font-size: 20px;
+  font-weight: 600;
+  text-align: center;
+  margin: 0 0 24px;
+}
+
+.home-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--td-radius-medium);
+  background: var(--td-bg-color-secondarycontainer);
+}
+
+.home-user__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.home-user__name {
+  font-weight: 600;
+}
+
+.home-user__sub {
+  font-size: 13px;
+  color: var(--td-text-color-secondary);
+}
+
+.home-hint {
+  font-size: 13px;
+  color: var(--td-text-color-secondary);
+  line-height: 1.6;
+  margin: 16px 0 20px;
+}
+</style>

@@ -1,0 +1,25 @@
+/* SSO 门户基础样式：色值一律走 TDesign 令牌（--td-*），不写死色值（家族约定） */
+:root {
+  /* 发丝线：与主仓库 --mc-hairline 同体系 */
+  --mc-hairline: var(--td-component-stroke);
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--td-bg-color-page);
+  color: var(--td-text-color-primary);
+  font-family:
+    'PingFang SC',
+    'Microsoft YaHei',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  /* 数字用 tabular-nums（家族约定） */
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,30 @@
+/** 中文文案；新增键 zh-CN 与 en-US 两处同步加（家族约定） */
+export default {
+  app: { name: 'Modernchat SSO' },
+  auth: {
+    welcomeBack: '欢迎回来',
+    login: '登录',
+    register: '注册',
+    registered: '注册成功，已自动登录',
+    username: '用户名',
+    password: '密码',
+    confirmPassword: '确认密码',
+    nickname: '昵称（可选）',
+    email: '邮箱（可选）',
+    required: '必填',
+    usernameMax: '用户名最多 20 个字符',
+    passwordLen: '密码 6-72 位',
+    pwdMismatch: '两次密码不一致',
+    emailInvalid: '邮箱格式不正确',
+    failed: '操作失败，请稍后重试',
+    toRegister: '没有账号？去注册',
+    toLogin: '已有账号？去登录',
+  },
+  home: {
+    title: '当前会话',
+    logout: '退出登录',
+    loggedOut: '已退出登录',
+    noEmail: '未绑定邮箱',
+    hint: '签发的 JWT 与主仓库 Modernchat 共享密钥互认，同一账号两处通用。',
+  },
+}
