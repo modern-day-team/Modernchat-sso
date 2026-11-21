@@ -27,4 +27,11 @@ var (
 	ErrResetTokenInvalid = errors.New("重置令牌无效或已过期")
 	ErrResetTokenStale   = errors.New("重置链接已失效，请重新申请")
 	ErrOldPassword       = errors.New("旧密码不正确")
+
+	// 站长账号管理（阶段 3）
+	ErrUserNotFound   = errors.New("用户不存在")
+	ErrInvalidDays    = errors.New("days 取值 0-3650（0 表示永久）")
+	ErrCannotBanAdmin = errors.New("不能封禁站长账号")
+	ErrInvalidRole    = errors.New("role 只能是 admin 或 user")
+	ErrLastAdmin      = errors.New("至少需要保留一个站长")
 )

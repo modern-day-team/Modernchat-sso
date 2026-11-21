@@ -211,6 +211,12 @@ func mapErr(c *gin.Context, err error) {
 		fail(c, http.StatusTooManyRequests, err.Error())
 	case errors.Is(err, apperr.ErrMailNotReady), errors.Is(err, apperr.ErrMailSendFailed):
 		fail(c, http.StatusServiceUnavailable, err.Error())
+	case errors.Is(err, apperr.ErrUserNotFound):
+		fail(c, http.StatusNotFound, err.Error())
+	case errors.Is(err, apperr.ErrInvalidDays), errors.Is(err, apperr.ErrInvalidRole), errors.Is(err, apperr.ErrOldPassword), errors.Is(err, apperr.ErrResetTokenStale):
+		fail(c, http.StatusBadRequest, err.Error())
+	case errors.Is(err, apperr.ErrCannotBanAdmin), errors.Is(err, apperr.ErrLastAdmin):
+		fail(c, http.StatusForbidden, err.Error())
 	case errors.Is(err, apperr.ErrResetTokenInvalid):
 		// 422：与验证码错误同级的「有害输入」语义
 		fail(c, http.StatusUnprocessableEntity, err.Error())

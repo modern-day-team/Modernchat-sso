@@ -85,7 +85,10 @@ function onPwdSubmit({ validateResult }: { validateResult: boolean | Record<stri
       </UiTag>
     </div>
     <p class="home-hint">{{ t('home.hint') }}</p>
-    <UiButton variant="outline" block @click="showPwdForm = !showPwdForm">
+    <UiButton v-if="auth.user?.role === 'admin'" variant="outline" block @click="router.push('/admin')">
+      {{ t('home.adminConsole') }}
+    </UiButton>
+    <UiButton class="home-gap" variant="outline" block @click="showPwdForm = !showPwdForm">
       {{ t('home.changePassword') }}
     </UiButton>
     <TForm
@@ -178,6 +181,10 @@ function onPwdSubmit({ validateResult }: { validateResult: boolean | Record<stri
 
 .home-hint--gap {
   margin-top: 20px;
+}
+
+.home-gap {
+  margin-top: 12px;
 }
 
 .pwd-form {

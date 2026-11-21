@@ -33,6 +33,28 @@ export const authApi = {
     http.patch<{ ok: true }>('/users/me/password', { oldPassword, newPassword }),
 }
 
+/** 站长账号管理（仅 admin 角色；403 由统一错误处理） */
+export const adminApi = {
+  listUsers: (q: { page?: number; pageSize?: number; kw?: string; role?: string; status?: string }) => {
+    const params = new URLSearchParams()
+    if (q.page) params.set('page', String(q.page))
+    if (q.pageSize) params.set('pageSize', String(q.pageSize))
+    if (q.kw) params.set('kw', q.kw)
+    if (q.role) params.set('role', q.role)
+    if (q.status) params.set('status', q.status)
+    const qs = params.toString()
+    return http.get<{ users: User[]; total: number; page: number; pageSize: number }>(
+      `/admin/users${qs ? `?${qs}` : ''}`,
+    )
+  },
+  ban: (id: number, days: number, reason: string) =>
+    http.post<{ ok: true }>(`/admin/users/${id}/ban`, { days, reason }),
+  unban: (id: number) => http.post<{ ok: true }>(`/admin/users/${id}/unban`),
+  resetPassword: (id: number) => http.post<{ newPassword: string }>(`/admin/users/${id}/reset-password`),
+  setRole: (id: number, role: 'user' | 'admin') =>
+    http.post<{ ok: true }>(`/admin/users/${id}/role`, { role }),
+}
+
 /** 站点开关（公开）：前端渲染依据 */
 export const settingsApi = {
   get: () =>

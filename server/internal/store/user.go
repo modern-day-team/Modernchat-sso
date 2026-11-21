@@ -1,10 +1,19 @@
 package store
 
 import (
+	"errors"
+	"slices"
+	"strings"
+	"time"
+
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/modern-day-team/Modernchat-sso/server/internal/model"
 )
+
+// ErrLastAdmin 至少需要保留一个站长（角色变更的原子约束）。
+var ErrLastAdmin = errors.New("last admin")
 
 // UserStore users 表访问。
 type UserStore struct{ db *gorm.DB }
@@ -56,4 +65,63 @@ func (s *UserStore) FindByID(id uint) (*model.User, error) {
 func (s *UserStore) BumpTokenVersion(id uint) error {
 	return s.db.Model(&model.User{}).Where("id = ?", id).
 		UpdateColumn("token_version", gorm.Expr("token_version + 1")).Error
+}
+
+// UserListQuery 用户列表查询条件（对齐主仓库 admin 列表的过滤维度）。
+type UserListQuery struct {
+	Page     int
+	PageSize int
+	Kw       string // 匹配用户名/昵称
+	Role     string // user | admin | 空
+	Status   string // active | banned | 空
+}
+
+// List 分页用户列表。
+func (s *UserStore) List(q UserListQuery) ([]model.User, int64, error) {
+	page, size := q.Page, q.PageSize
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 || size > 100 {
+		size = 20
+	}
+	tx := s.db.Model(&model.User{})
+	if kw := strings.TrimSpace(q.Kw); kw != "" {
+		like := "%" + kw + "%"
+		tx = tx.Where("username LIKE ? OR nickname LIKE ?", like, like)
+	}
+	if q.Role == "user" || q.Role == "admin" {
+		tx = tx.Where("role = ?", q.Role)
+	}
+	if q.Status == "active" {
+		tx = tx.Where("banned_until IS NULL OR banned_until <= ?", time.Now())
+	} else if q.Status == "banned" {
+		tx = tx.Where("banned_until > ?", time.Now())
+	}
+	var total int64
+	if err := tx.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var users []model.User
+	if err := tx.Order("id ASC").Offset((page - 1) * size).Limit(size).Find(&users).Error; err != nil {
+		return nil, 0, err
+	}
+	return users, total, nil
+}
+
+// SetRole 变更角色；降职最后一个站长时返回 ErrLastAdmin。
+// 事务内 FOR UPDATE 锁住全部 admin 行（主仓库同款原子保护）；
+// 不 bump token_version——Auth 每请求查库，角色变更即时生效。
+func (s *UserStore) SetRole(id uint, role string) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		var adminIDs []uint
+		if err := tx.Model(&model.User{}).Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("role = ?", "admin").Order("id").Pluck("id", &adminIDs).Error; err != nil {
+			return err
+		}
+		if role != "admin" && slices.Contains(adminIDs, id) && len(adminIDs) <= 1 {
+			return ErrLastAdmin
+		}
+		return tx.Model(&model.User{}).Where("id = ?", id).Update("role", role).Error
+	})
 }
