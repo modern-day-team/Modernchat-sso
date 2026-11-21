@@ -22,4 +22,9 @@ var (
 	ErrMailNotReady      = errors.New("站点尚未配置邮件服务，暂时无法发送验证码")
 	ErrMailSendFailed    = errors.New("验证邮件发送失败，请稍后重试")
 	ErrAccountLocked     = errors.New("账号已锁定") // 消息由 service 拼接剩余分钟数
+
+	// 密码重置与改密（阶段 2）
+	ErrResetTokenInvalid = errors.New("重置令牌无效或已过期")
+	ErrResetTokenStale   = errors.New("重置链接已失效，请重新申请")
+	ErrOldPassword       = errors.New("旧密码不正确")
 )

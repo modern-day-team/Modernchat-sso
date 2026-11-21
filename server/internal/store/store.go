@@ -16,7 +16,7 @@ func Open(dsn string, autoMigrate bool) (*gorm.DB, error) {
 		return nil, err
 	}
 	if autoMigrate {
-		if err := db.AutoMigrate(&model.User{}, &model.SystemSetting{}, &model.EmailCode{}, &model.LoginAttempt{}); err != nil {
+		if err := db.AutoMigrate(&model.User{}, &model.SystemSetting{}, &model.EmailCode{}, &model.LoginAttempt{}, &model.PasswordReset{}); err != nil {
 			return nil, err
 		}
 	}

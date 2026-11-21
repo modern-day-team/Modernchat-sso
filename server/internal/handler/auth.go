@@ -22,6 +22,9 @@ type AccountService interface {
 	Login(username, password, ip string) (tokenStr string, user *model.User, err error)
 	Logout(userID uint) error
 	SendEmailCode(email, purpose string) (cooldownSeconds int, err error)
+	Forgot(email string)
+	Reset(token, newPassword string) error
+	ChangePassword(userID uint, oldPassword, newPassword string) error
 }
 
 // AuthHandler 认证相关 HTTP 端点（RESTful：POST /sessions 即登录）。
@@ -126,6 +129,66 @@ func (h *AuthHandler) SendEmailCode(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true, "cooldownSeconds": cooldown})
 }
 
+type forgotReq struct {
+	Email string `json:"email" binding:"required"`
+}
+
+// Forgot POST /api/v1/password-resets：恒 200 {ok:true}，不暴露邮箱存在性
+// （邮件发送失败也静默——对齐主仓库 Forgot 的防枚举语义）。
+func (h *AuthHandler) Forgot(c *gin.Context) {
+	var req forgotReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, http.StatusBadRequest, "请填写邮箱")
+		return
+	}
+	h.accounts.Forgot(req.Email)
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+type resetReq struct {
+	Token       string `json:"token" binding:"required"`
+	NewPassword string `json:"newPassword" binding:"required,min=6,max=72"`
+}
+
+// Reset POST /api/v1/password-resets/:token：重置密码（令牌单次消费 + tv bump 全端失效）。
+func (h *AuthHandler) Reset(c *gin.Context) {
+	var req resetReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, http.StatusBadRequest, "参数不合法：密码 6-72 位")
+		return
+	}
+	if err := h.accounts.Reset(req.Token, req.NewPassword); err != nil {
+		mapErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+type changePasswordReq struct {
+	OldPassword string `json:"oldPassword" binding:"required"`
+	NewPassword string `json:"newPassword" binding:"required,min=6,max=72"`
+}
+
+// ChangePassword PATCH /api/v1/users/me/password：自身改密（SSO 新增，主仓库本期无独立入口）。
+// 改密后 token_version+1 全端失效，客户端应清本地 token 并引导重新登录。
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	u := middleware.UserFrom(c)
+	if u == nil {
+		fail(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	var req changePasswordReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, http.StatusBadRequest, "参数不合法：密码 6-72 位")
+		return
+	}
+	if err := h.accounts.ChangePassword(u.ID, req.OldPassword, req.NewPassword); err != nil {
+		mapErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
 // mapErr 领域错误 → HTTP 状态码：本层唯一的错误映射点，依赖 apperr 哨兵而非 service 实现。
 func mapErr(c *gin.Context, err error) {
 	switch {
@@ -148,6 +211,11 @@ func mapErr(c *gin.Context, err error) {
 		fail(c, http.StatusTooManyRequests, err.Error())
 	case errors.Is(err, apperr.ErrMailNotReady), errors.Is(err, apperr.ErrMailSendFailed):
 		fail(c, http.StatusServiceUnavailable, err.Error())
+	case errors.Is(err, apperr.ErrResetTokenInvalid):
+		// 422：与验证码错误同级的「有害输入」语义
+		fail(c, http.StatusUnprocessableEntity, err.Error())
+	case errors.Is(err, apperr.ErrResetTokenStale), errors.Is(err, apperr.ErrOldPassword):
+		fail(c, http.StatusBadRequest, err.Error())
 	default:
 		slog.Error("内部错误", "err", err, "path", c.FullPath())
 		// 500 文案与主仓库规格 §5 一致；真实原因只进日志

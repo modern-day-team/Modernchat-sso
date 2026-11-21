@@ -15,6 +15,9 @@ func NewUserStore(db *gorm.DB) *UserStore { return &UserStore{db: db} }
 // Create 新建用户。
 func (s *UserStore) Create(u *model.User) error { return s.db.Create(u).Error }
 
+// Save 保存用户（改密/封禁等全字段更新）。
+func (s *UserStore) Save(u *model.User) error { return s.db.Save(u).Error }
+
 // Count 用户总数（首个注册者判定用）。
 func (s *UserStore) Count() (int64, error) {
 	var n int64

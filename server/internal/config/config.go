@@ -16,6 +16,8 @@ type Config struct {
 	JWTSecret    string // JWT 签名密钥
 	CookieSecure bool   // mc_auth cookie 是否带 Secure（生产必须 true）
 
+	PublicURL string // PUBLIC_URL 门户公开地址（重置密码链接前缀），生产必须改
+
 	// 在线更新（站长侧）：WEB_UPDATE=false 整体关闭；可用性另需 systemd 模板单元部署
 	WebUpdate         bool
 	ReleaseAPIURL     string // RELEASE_API_URL 显式 releases/latest API 地址
@@ -60,6 +62,8 @@ func Load() (Config, error) {
 		DBDSN:        getEnv("DB_DSN", "root:modernchat_sso_dev@tcp(127.0.0.1:3307)/modernchat_sso?charset=utf8mb4&parseTime=true&loc=Local"),
 		JWTSecret:    os.Getenv("JWT_SECRET"),
 		CookieSecure: getEnv("COOKIE_SECURE", "false") == "true",
+
+		PublicURL: getEnv("PUBLIC_URL", "http://localhost:5175"),
 
 		WebUpdate:         getEnv("WEB_UPDATE", "true") == "true",
 		ReleaseAPIURL:     os.Getenv("RELEASE_API_URL"),

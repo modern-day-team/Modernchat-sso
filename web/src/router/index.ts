@@ -8,6 +8,9 @@ const router = createRouter({
     { path: '/', name: 'home', component: () => import('@/views/HomeView.vue') },
     { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue') },
     { path: '/register', name: 'register', component: () => import('@/views/RegisterView.vue') },
+    // 忘记/重置不设登录守卫：登录态过期时也能走完流程（主仓库 /forgot 同款）
+    { path: '/forgot', name: 'forgot', component: () => import('@/views/ForgotView.vue') },
+    { path: '/reset', name: 'reset', component: () => import('@/views/ResetView.vue') },
   ],
 })
 

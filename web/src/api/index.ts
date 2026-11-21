@@ -22,6 +22,15 @@ export const authApi = {
   /** 发送邮箱验证码：冷却中响应剩余秒数（防枚举，恒 200） */
   sendEmailCode: (email: string) =>
     http.post<{ ok: true; cooldownSeconds: number }>('/email-codes', { email }, { skipAuth: true }),
+  /** 忘记密码：恒 200（不暴露邮箱存在性）；重置链接走邮件 */
+  forgot: (email: string) =>
+    http.post<{ ok: true }>('/password-resets', { email }, { skipAuth: true }),
+  /** 重置密码：令牌一次性（15 分钟有效） */
+  reset: (token: string, newPassword: string) =>
+    http.post<{ ok: true }>(`/password-resets/${encodeURIComponent(token)}`, { newPassword }, { skipAuth: true }),
+  /** 自身改密：成功后全端失效（需重新登录） */
+  changePassword: (oldPassword: string, newPassword: string) =>
+    http.patch<{ ok: true }>('/users/me/password', { oldPassword, newPassword }),
 }
 
 /** 站点开关（公开）：前端渲染依据 */

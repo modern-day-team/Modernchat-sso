@@ -34,12 +34,13 @@ func Setup(cfg config.Config, db *gorm.DB, upd *service.Updater) *gin.Engine {
 	settings := store.NewSettingStore(db)
 	emailCodes := store.NewEmailCodeStore(db, cfg.JWTSecret)
 	loginAttempts := store.NewLoginAttemptStore(db)
+	resets := store.NewPasswordResetStore(db)
 
 	settingsH := handler.NewSettingsHandler(settings)
 
 	// services
 	mailer := service.NewMailer(cfg)
-	accounts := service.NewAccountService(users, emailCodes, mailer, loginAttempts, settings, cfg.JWTSecret)
+	accounts := service.NewAccountService(users, emailCodes, mailer, loginAttempts, settings, resets, cfg.PublicURL, cfg.JWTSecret)
 	authH := handler.NewAuthHandler(accounts, cfg.CookieSecure)
 	authMw := middleware.Auth(accounts) // *service.AccountService 满足窄接口 Authenticator
 
@@ -52,13 +53,16 @@ func Setup(cfg config.Config, db *gorm.DB, upd *service.Updater) *gin.Engine {
 	// 公开站点开关：前端渲染依据
 	v1.GET("/settings", settingsH.Public)
 
-	v1.POST("/users", authLimit, maint, authH.Register)            // 注册
-	v1.POST("/sessions", authLimit, authH.Login)                   // 登录（创建会话；豁免维护）
-	v1.POST("/email-codes", authLimit, maint, authH.SendEmailCode) // 发送邮箱验证码
+	v1.POST("/users", authLimit, maint, authH.Register)               // 注册
+	v1.POST("/sessions", authLimit, authH.Login)                      // 登录（创建会话；豁免维护）
+	v1.POST("/email-codes", authLimit, maint, authH.SendEmailCode)    // 发送邮箱验证码
+	v1.POST("/password-resets", authLimit, maint, authH.Forgot)       // 忘记密码
+	v1.POST("/password-resets/:token", authLimit, maint, authH.Reset) // 重置密码
 
 	authed := v1.Group("", authMw)
-	authed.GET("/users/me", authH.Me)                // 当前用户
-	authed.DELETE("/sessions/current", authH.Logout) // 登出（吊销全部旧 token；豁免维护）
+	authed.GET("/users/me", authH.Me)                               // 当前用户
+	authed.PATCH("/users/me/password", maint, authH.ChangePassword) // 自身改密
+	authed.DELETE("/sessions/current", authH.Logout)                // 登出（吊销全部旧 token；豁免维护）
 
 	// 站长后台：Auth + Admin（角色每请求查库，变更即时生效）
 	admin := v1.Group("/admin", authMw, middleware.Admin())

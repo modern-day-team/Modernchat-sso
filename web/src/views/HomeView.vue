@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { MessagePlugin } from 'tdesign-vue-next'
+import { Form as TForm, FormItem as TFormItem, MessagePlugin } from 'tdesign-vue-next'
+import type { FormProps } from 'tdesign-vue-next'
 
+import { authApi } from '@/api'
+import { ApiError } from '@/api/client'
 import UiButton from '@/components/ui/UiButton.vue'
+import UiInput from '@/components/ui/UiInput.vue'
 import UiTag from '@/components/ui/UiTag.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -21,6 +25,47 @@ async function onLogout() {
   await auth.logout()
   MessagePlugin.success(t('home.loggedOut'))
   void router.push('/login')
+}
+
+// ===== 自身改密（成功后全端失效，需重新登录） =====
+const pwdForm = reactive({ oldPassword: '', newPassword: '', confirm: '' })
+const pwdLoading = ref(false)
+const showPwdForm = ref(false)
+
+const pwdRules: FormProps['rules'] = {
+  oldPassword: [{ required: true, message: t('auth.required') }],
+  newPassword: [
+    { required: true, message: t('auth.required') },
+    { min: 6, max: 72, message: t('auth.passwordLen') },
+  ],
+  confirm: [
+    {
+      required: true,
+      validator: (v: string) => v === pwdForm.newPassword,
+      message: t('auth.pwdMismatch'),
+    },
+  ],
+}
+
+function onPwdSubmit({ validateResult }: { validateResult: boolean | Record<string, unknown> }) {
+  if (validateResult !== true || pwdLoading.value) return
+  pwdLoading.value = true
+  authApi
+    .changePassword(pwdForm.oldPassword, pwdForm.newPassword)
+    .then(() => {
+      MessagePlugin.success(t('home.pwdChanged'))
+      // tv 已 bump：本地会话立即失效，清态回登录页
+      return auth.logout()
+    })
+    .then(() => {
+      void router.push('/login')
+    })
+    .catch((e: unknown) => {
+      MessagePlugin.error(e instanceof ApiError ? e.message : t('auth.failed'))
+    })
+    .finally(() => {
+      pwdLoading.value = false
+    })
 }
 </script>
 
@@ -40,6 +85,31 @@ async function onLogout() {
       </UiTag>
     </div>
     <p class="home-hint">{{ t('home.hint') }}</p>
+    <UiButton variant="outline" block @click="showPwdForm = !showPwdForm">
+      {{ t('home.changePassword') }}
+    </UiButton>
+    <TForm
+      v-if="showPwdForm"
+      class="pwd-form"
+      :data="pwdForm"
+      :rules="pwdRules"
+      label-width="0"
+      @submit="onPwdSubmit"
+    >
+      <TFormItem name="oldPassword">
+        <UiInput v-model="pwdForm.oldPassword" type="password" :placeholder="t('home.oldPassword')" clearable />
+      </TFormItem>
+      <TFormItem name="newPassword">
+        <UiInput v-model="pwdForm.newPassword" type="password" :placeholder="t('home.newPassword')" clearable />
+      </TFormItem>
+      <TFormItem name="confirm">
+        <UiInput v-model="pwdForm.confirm" type="password" :placeholder="t('home.confirmNew')" clearable />
+      </TFormItem>
+      <UiButton theme="primary" type="submit" block :loading="pwdLoading">
+        {{ t('home.pwdSubmit') }}
+      </UiButton>
+    </TForm>
+    <p class="home-hint home-hint--gap">{{ t('home.logoutHint') }}</p>
     <UiButton theme="danger" variant="outline" block @click="onLogout">
       {{ t('home.logout') }}
     </UiButton>
@@ -104,5 +174,15 @@ async function onLogout() {
   color: var(--td-text-color-secondary);
   line-height: 1.6;
   margin: 16px 0 20px;
+}
+
+.home-hint--gap {
+  margin-top: 20px;
+}
+
+.pwd-form {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--mc-hairline);
 }
 </style>
