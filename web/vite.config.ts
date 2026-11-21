@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   server: {
-    // 家族端口约定：主仓库 web :5173、官网 :5174，SSO 门户用 :5175，便于三站并行开发
+    // 项目组端口约定：主仓库 web :5173、官网 :5174，SSO 门户用 :5175，便于三站并行开发
     port: 5175,
     proxy: {
       '/api': 'http://localhost:8090',

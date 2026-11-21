@@ -1,4 +1,4 @@
-// Modernchat-sso：Modernchat 家族的 SSO 认证服务入口。
+// Modernchat-sso：Modernchat 项目组的 SSO 认证服务入口。
 package main
 
 import (

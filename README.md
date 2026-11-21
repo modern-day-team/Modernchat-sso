@@ -1,6 +1,6 @@
 # Modernchat-sso
 
-Modernchat 家族的 SSO（单点登录）认证服务。
+Modernchat 项目组的 SSO（单点登录）认证服务。
 
 ## 技术栈
 
@@ -40,4 +40,4 @@ cd ../web && npm install && npm run dev   # :5175，/api 已代理到 :8090
 - 开发约定见仓库内 `AGENTS.md`（本地文件，不入库）
 - 提交信息：Conventional Commits + 中文描述（`feat: xxx` / `fix: xxx`）
 - 仓库强制 LF（`.gitattributes`）
-- **严禁把凭据写入仓库**（家族历史教训）
+- **严禁把凭据写入仓库**（项目组历史教训）

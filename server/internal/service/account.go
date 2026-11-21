@@ -171,7 +171,7 @@ func (s *AccountService) SendEmailCode(email, purpose string) (int, error) {
 	}
 	subject, body := emailCodeMessage(purpose, code)
 	if err := s.mailer.Send(context.Background(), MailMessage{To: email, Subject: subject, Text: body}); err != nil {
-		// 家族规则：日志不含验证码正文
+		// 项目组规则：日志不含验证码正文
 		slog.Error("验证码邮件发送失败", "err", err, "purpose", purpose)
 		return 0, apperr.ErrMailSendFailed
 	}
@@ -192,7 +192,7 @@ func emailCodeMessage(purpose, code string) (subject, body string) {
 }
 
 // Login 登录：账号级锁定 → 校验凭证与封禁 → 签发 token。
-// 家族规则：登录失败只记用户名与 IP，绝不记密码/令牌；账号不存在与密码错误同一错误。
+// 项目组规则：登录失败只记用户名与 IP，绝不记密码/令牌；账号不存在与密码错误同一错误。
 func (s *AccountService) Login(username, password, ip string) (string, *model.User, error) {
 	ops := s.ops()
 	if s.loginAttempts != nil && ops.LoginMaxAttempts > 0 {
