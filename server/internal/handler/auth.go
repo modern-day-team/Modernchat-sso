@@ -12,14 +12,16 @@ import (
 	"github.com/modern-day-team/Modernchat-sso/server/internal/apperr"
 	"github.com/modern-day-team/Modernchat-sso/server/internal/middleware"
 	"github.com/modern-day-team/Modernchat-sso/server/internal/model"
+	"github.com/modern-day-team/Modernchat-sso/server/internal/service"
 	"github.com/modern-day-team/Modernchat-sso/server/internal/token"
 )
 
 // AccountService 消费方定义的窄接口（由 service.AccountService 实现）。
 type AccountService interface {
-	Register(username, password, nickname string, email *string) (*model.User, error)
+	Register(username, password, nickname, email, emailCode string) (*model.User, error)
 	Login(username, password, ip string) (tokenStr string, user *model.User, err error)
 	Logout(userID uint) error
+	SendEmailCode(email, purpose string) (cooldownSeconds int, err error)
 }
 
 // AuthHandler 认证相关 HTTP 端点（RESTful：POST /sessions 即登录）。
@@ -34,10 +36,11 @@ func NewAuthHandler(accounts AccountService, cookieSecure bool) *AuthHandler {
 }
 
 type registerReq struct {
-	Username string  `json:"username" binding:"required,max=20"`
-	Password string  `json:"password" binding:"required,min=6,max=72"`
-	Nickname string  `json:"nickname" binding:"max=20"`
-	Email    *string `json:"email" binding:"omitempty,email,max=254"`
+	Username  string `json:"username" binding:"required,max=20"`
+	Password  string `json:"password" binding:"required,min=6,max=72"`
+	Nickname  string `json:"nickname" binding:"max=20"`
+	Email     string `json:"email" binding:"omitempty,email,max=254"`
+	EmailCode string `json:"emailCode"`
 }
 
 // Register 注册。业务规则（首个 admin、唯一性、默认头像色）在 service。
@@ -47,7 +50,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		fail(c, http.StatusBadRequest, "参数不合法：用户名 3-20 位字母/数字/_/-，密码 6-72 位")
 		return
 	}
-	u, err := h.accounts.Register(req.Username, req.Password, req.Nickname, req.Email)
+	u, err := h.accounts.Register(req.Username, req.Password, req.Nickname, req.Email, req.EmailCode)
 	if err != nil {
 		mapErr(c, err)
 		return
@@ -96,19 +99,55 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	c.JSON(http.StatusOK, middleware.UserFrom(c))
 }
 
+type emailCodeReq struct {
+	Email   string `json:"email" binding:"required"`
+	Purpose string `json:"purpose"`
+}
+
+// SendEmailCode POST /api/v1/email-codes：生成并发送邮箱验证码（skipAuth 公开）。
+// 响应 {ok, cooldownSeconds}：冷却中返回剩余+1、成功返回 60（防枚举，主仓库同款）。
+func (h *AuthHandler) SendEmailCode(c *gin.Context) {
+	var req emailCodeReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, http.StatusBadRequest, "请填写邮箱")
+		return
+	}
+	purpose := req.Purpose
+	switch purpose {
+	case service.EmailPurposeRegister, service.EmailPurposeChange:
+	default:
+		purpose = service.EmailPurposeRegister
+	}
+	cooldown, err := h.accounts.SendEmailCode(req.Email, purpose)
+	if err != nil {
+		mapErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "cooldownSeconds": cooldown})
+}
+
 // mapErr 领域错误 → HTTP 状态码：本层唯一的错误映射点，依赖 apperr 哨兵而非 service 实现。
 func mapErr(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, apperr.ErrInvalidInput):
 		fail(c, http.StatusBadRequest, "参数不合法：用户名 3-20 位字母/数字/_/-，密码 6-72 位")
-	case errors.Is(err, apperr.ErrInvalidEmail):
+	case errors.Is(err, apperr.ErrInvalidEmail), errors.Is(err, apperr.ErrEmailRequired), errors.Is(err, apperr.ErrEmailCodeRequired):
 		fail(c, http.StatusBadRequest, err.Error())
 	case errors.Is(err, apperr.ErrUsernameTaken), errors.Is(err, apperr.ErrEmailTaken):
 		fail(c, http.StatusConflict, err.Error())
+	case errors.Is(err, apperr.ErrEmailCodeInvalid):
+		// 422：语义上有害输入（验证码错误），对齐主仓库规格
+		fail(c, http.StatusUnprocessableEntity, err.Error())
 	case errors.Is(err, apperr.ErrInvalidCredentials), errors.Is(err, apperr.ErrInvalidToken):
 		fail(c, http.StatusUnauthorized, err.Error())
 	case errors.Is(err, apperr.ErrBanned):
 		fail(c, http.StatusForbidden, err.Error())
+	case errors.Is(err, apperr.ErrRegisterClosed):
+		fail(c, http.StatusForbidden, err.Error())
+	case errors.Is(err, apperr.ErrAccountLocked):
+		fail(c, http.StatusTooManyRequests, err.Error())
+	case errors.Is(err, apperr.ErrMailNotReady), errors.Is(err, apperr.ErrMailSendFailed):
+		fail(c, http.StatusServiceUnavailable, err.Error())
 	default:
 		slog.Error("内部错误", "err", err, "path", c.FullPath())
 		// 500 文案与主仓库规格 §5 一致；真实原因只进日志

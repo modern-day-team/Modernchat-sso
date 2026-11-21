@@ -9,6 +9,7 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.136
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ses v1.3.136
 	golang.org/x/crypto v0.58.0
+	golang.org/x/time v0.16.0
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gorm v1.25.12
 )

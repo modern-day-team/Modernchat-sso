@@ -24,6 +24,9 @@ type MailMessage struct {
 // Mailer 邮件发送抽象。
 type Mailer interface {
 	Send(ctx context.Context, msg MailMessage) error
+	// Enabled 是否具备真实送达能力（console 通道为 false，仅本地开发看日志）。
+	// 业务以它判定「邮件服务是否就绪」（对齐主仓库 mailerReady 的单一门禁）。
+	Enabled() bool
 }
 
 // NewMailer 按配置装配通道链：MAIL_PROVIDER 逗号分隔，按序故障转移。
@@ -92,9 +95,22 @@ func (m *namedMailer) Send(ctx context.Context, msg MailMessage) error {
 	return nil
 }
 
+// Enabled 透传内层通道的就绪状态。
+func (m *namedMailer) Enabled() bool { return m.inner.Enabled() }
+
 // failoverMailer 多通道按序故障转移：主选失败自动降级下一通道，全部失败才报错（错误聚合）。
 type failoverMailer struct {
 	chain []Mailer
+}
+
+// Enabled 链上任一通道具备真实送达能力即为就绪。
+func (m *failoverMailer) Enabled() bool {
+	for _, p := range m.chain {
+		if p.Enabled() {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *failoverMailer) Send(ctx context.Context, msg MailMessage) error {

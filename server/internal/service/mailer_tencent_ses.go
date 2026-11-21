@@ -45,6 +45,9 @@ func NewTencentSESMailer(cfg TencentSESConfig) (*TencentSESMailer, error) {
 	return &TencentSESMailer{client: client, from: cfg.From, templateID: cfg.TemplateID}, nil
 }
 
+// Enabled 工厂仅在配置完整时构造，此处恒为 true。
+func (m *TencentSESMailer) Enabled() bool { return true }
+
 // Send 经模板发送：正文整体作为 {{content}} 变量注入。
 func (m *TencentSESMailer) Send(ctx context.Context, msg MailMessage) error {
 	data, err := json.Marshal(map[string]string{"content": msg.Text})

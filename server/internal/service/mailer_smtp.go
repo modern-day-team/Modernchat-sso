@@ -30,6 +30,9 @@ func NewSMTPMailer(host, port, user, pass, from string) *SMTPMailer {
 	return &SMTPMailer{host: host, port: cmp.Or(port, "465"), user: user, pass: pass, from: from}
 }
 
+// Enabled 工厂仅在配置完整时构造 SMTPMailer，此处恒为 true。
+func (m *SMTPMailer) Enabled() bool { return true }
+
 // Send 发送纯文本邮件。
 // net/smtp 不感知 ctx：只在拨号前检查取消；其余超时由 dialer/SetDeadline（mailTimeout）兜底。
 func (m *SMTPMailer) Send(ctx context.Context, msg MailMessage) error {

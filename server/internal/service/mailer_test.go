@@ -14,9 +14,14 @@ func configForMailerTest(provider string) config.Config {
 }
 
 // fakeMailer 可脚本化失败的假通道（不依赖 DB/网络，纯单测）。
-type fakeMailer struct{ err error }
+type fakeMailer struct {
+	err     error
+	enabled bool
+}
 
 func (f *fakeMailer) Send(_ context.Context, _ MailMessage) error { return f.err }
+
+func (f *fakeMailer) Enabled() bool { return f.enabled }
 
 func TestFailoverMailer_DegradesToNextProvider(t *testing.T) {
 	m := &failoverMailer{chain: []Mailer{

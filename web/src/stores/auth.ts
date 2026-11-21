@@ -22,8 +22,14 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /** 注册成功后自动登录（后端注册接口只返回用户本体，不含 token） */
-  async function register(username: string, password: string, nickname: string, email?: string) {
-    await authApi.register({ username, password, nickname, email })
+  async function register(
+    username: string,
+    password: string,
+    nickname: string,
+    email?: string,
+    emailCode?: string,
+  ) {
+    await authApi.register({ username, password, nickname, email, emailCode })
     await login(username, password)
   }
 

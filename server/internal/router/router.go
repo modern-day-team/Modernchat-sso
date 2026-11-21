@@ -1,4 +1,4 @@
-// Package router 组合根：装配 store → service → handler/middleware。
+// Package router 组合根：装配 db → store → service → handler/middleware。
 // 依赖方向单向：handler/middleware →（窄接口）→ service → store；本包是唯一知道全部具体类型的地方。
 package router
 
@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 
 	"github.com/modern-day-team/Modernchat-sso/server/internal/config"
 	"github.com/modern-day-team/Modernchat-sso/server/internal/handler"
@@ -16,7 +17,7 @@ import (
 )
 
 // Setup 装配全部路由。upd 为在线更新服务（WEB_UPDATE=false 时传 nil，接口报不可用）。
-func Setup(cfg config.Config, users *store.UserStore, settings *store.SettingStore, upd *service.Updater) *gin.Engine {
+func Setup(cfg config.Config, db *gorm.DB, upd *service.Updater) *gin.Engine {
 	r := gin.Default()
 
 	r.GET("/healthz", func(c *gin.Context) {
@@ -28,24 +29,36 @@ func Setup(cfg config.Config, users *store.UserStore, settings *store.SettingSto
 		c.JSON(http.StatusOK, version.Current())
 	})
 
+	// stores
+	users := store.NewUserStore(db)
+	settings := store.NewSettingStore(db)
+	emailCodes := store.NewEmailCodeStore(db, cfg.JWTSecret)
+	loginAttempts := store.NewLoginAttemptStore(db)
+
 	settingsH := handler.NewSettingsHandler(settings)
 
-	accounts := service.NewAccountService(users, cfg.JWTSecret)
+	// services
+	mailer := service.NewMailer(cfg)
+	accounts := service.NewAccountService(users, emailCodes, mailer, loginAttempts, settings, cfg.JWTSecret)
 	authH := handler.NewAuthHandler(accounts, cfg.CookieSecure)
 	authMw := middleware.Auth(accounts) // *service.AccountService 满足窄接口 Authenticator
+
+	// 限流：认证类公开端点 IP 10/min（主仓库同款；多实例共享配额可换 Redis 实现）
+	authLimit := middleware.RateLimit(middleware.NewLimiterStore(10, 10), middleware.KeyByIP)
+	// 维护模式门禁：登录/登出/站长接口豁免
+	maint := middleware.Maintenance(settings)
 
 	v1 := r.Group("/api/v1")
 	// 公开站点开关：前端渲染依据
 	v1.GET("/settings", settingsH.Public)
 
-	// TODO(限流)：登录/注册挂 IP 级限流 + 账号级失败锁定（参照主仓库 middleware/limiter.go 的 go-redis 方案）；
-	// 落地时做成独立中间件，经窄接口注入，不侵入 handler/service
-	v1.POST("/users", authH.Register) // 注册
-	v1.POST("/sessions", authH.Login) // 登录（创建会话）
+	v1.POST("/users", authLimit, maint, authH.Register)            // 注册
+	v1.POST("/sessions", authLimit, authH.Login)                   // 登录（创建会话；豁免维护）
+	v1.POST("/email-codes", authLimit, maint, authH.SendEmailCode) // 发送邮箱验证码
 
 	authed := v1.Group("", authMw)
 	authed.GET("/users/me", authH.Me)                // 当前用户
-	authed.DELETE("/sessions/current", authH.Logout) // 登出（吊销全部旧 token）
+	authed.DELETE("/sessions/current", authH.Logout) // 登出（吊销全部旧 token；豁免维护）
 
 	// 站长后台：Auth + Admin（角色每请求查库，变更即时生效）
 	admin := v1.Group("/admin", authMw, middleware.Admin())
