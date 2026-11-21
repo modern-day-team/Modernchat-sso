@@ -7,5 +7,5 @@
 - JWT 与主仓库 modern-chat-new 同口径（HS256，claims `uid`+`tv`，7 天，`mc_auth` cookie），共享 `JWT_SECRET` 可互认
 - 前端门户 `web/`：Vue 3 + Vite 8 + TS + Pinia + UnoCSS + TDesign 认证表单（登录/注册/会话卡片），配置与主仓库 web 同体系，dev :5175
 - CI：GitHub Actions 双端工作流（server gofmt/vet/build/test -race + 挂 MySQL 服务；web oxlint/eslint/build），push 与 PR 触发
-- 邮件发送层：可插拔 `Mailer` 接口，三通道——console（本地开发）、SMTP（与主仓库同语义）、腾讯云 SES（模板发送，`{{content}}` 模板承接正文）；其他厂商按同接口扩展
+- 邮件发送层：可插拔 `Mailer` 接口，**多厂商故障转移链**——`MAIL_PROVIDER` 逗号分隔多通道（如 `tencent_ses,smtp`），按序降级、错误聚合；内置 console / SMTP / 腾讯云 SES 三通道，其他厂商按同接口扩展
 - 本地开发环境：docker-compose MySQL 8（3307）、`.env.example`、仓库强制 LF
