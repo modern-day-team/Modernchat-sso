@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
@@ -40,12 +41,16 @@ func newTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-// newUser 建一个测试用户（唯一用户名避免冲突）。
+// newUser 建一个测试用户（唯一用户名避免冲突）；PasswordHash 用真实 bcrypt（60 字符，匹配列宽）。
 func newUser(t *testing.T, db *gorm.DB, username string) model.User {
 	t.Helper()
+	h, err := bcrypt.GenerateFromPassword([]byte("test-password"), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatalf("生成 bcrypt 失败: %v", err)
+	}
 	u := model.User{
 		Username:     username,
-		PasswordHash: "$2a$10$placeholderplaceholderplaceholderplaceholderplaceholder",
+		PasswordHash: string(h),
 		Nickname:     username,
 	}
 	if err := db.Create(&u).Error; err != nil {
