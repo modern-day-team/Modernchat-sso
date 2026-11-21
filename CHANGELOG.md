@@ -1,0 +1,9 @@
+# Changelog
+
+## 0.1.0（2026-11-21）
+
+- 项目骨架：Go 1.26 + Gin + GORM（MySQL 8），分层 `config / model / store / service / token / apperr / handler / middleware / router`（高内聚低耦合：业务规则内聚 service，传输层经窄接口依赖，apperr 哨兵解耦错误语义）
+- RESTful 认证 API v1：注册、登录、登出、当前用户（`/api/v1` 前缀）
+- JWT 与主仓库 modern-chat-new 同口径（HS256，claims `uid`+`tv`，7 天，`mc_auth` cookie），共享 `JWT_SECRET` 可互认
+- 前端门户 `web/`：Vue 3 + Vite 8 + TS + Pinia + UnoCSS + TDesign 认证表单（登录/注册/会话卡片），配置与主仓库 web 同体系，dev :5175
+- 本地开发环境：docker-compose MySQL 8（3307）、`.env.example`、仓库强制 LF

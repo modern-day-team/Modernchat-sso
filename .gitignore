@@ -1,0 +1,7 @@
+AGENTS.md
+.env
+*.log
+*.exe
+node_modules/
+dist/
+tmp/
