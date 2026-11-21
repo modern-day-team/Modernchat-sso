@@ -23,14 +23,30 @@ type Mailer interface {
 	Send(ctx context.Context, msg MailMessage) error
 }
 
-// NewMailer 按配置选通道；选了 smtp 但主机为空时退回 console（并告警），保证服务能起。
+// NewMailer 按配置选通道；配置不完整时退回 console（并告警），保证服务能起。
+// ⚠️ 生产误配会静默退化为不发真信：靠启动日志的告警暴露，务必核对。
 func NewMailer(cfg config.Config) Mailer {
-	if cfg.MailProvider == "smtp" {
+	switch cfg.MailProvider {
+	case "smtp":
 		if cfg.SMTPHost == "" {
 			slog.Warn("MAIL_PROVIDER=smtp 但 SMTP_HOST 为空，退回 console（不发真信）")
 			return NewConsoleMailer()
 		}
 		return NewSMTPMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom)
+	case "tencent_ses":
+		m, err := NewTencentSESMailer(TencentSESConfig{
+			SecretID:   cfg.TencentSESSecretID,
+			SecretKey:  cfg.TencentSESSecretKey,
+			Region:     cfg.TencentSESRegion,
+			From:       cfg.TencentSESFrom,
+			TemplateID: cfg.TencentSESTemplateID,
+		})
+		if err != nil {
+			slog.Error("腾讯云 SES 配置不完整，退回 console（不发真信）", "err", err)
+			return NewConsoleMailer()
+		}
+		return m
+	default:
+		return NewConsoleMailer()
 	}
-	return NewConsoleMailer()
 }
