@@ -16,7 +16,7 @@ import (
 )
 
 // Setup 装配全部路由。upd 为在线更新服务（WEB_UPDATE=false 时传 nil，接口报不可用）。
-func Setup(cfg config.Config, users *store.UserStore, upd *service.Updater) *gin.Engine {
+func Setup(cfg config.Config, users *store.UserStore, settings *store.SettingStore, upd *service.Updater) *gin.Engine {
 	r := gin.Default()
 
 	r.GET("/healthz", func(c *gin.Context) {
@@ -28,12 +28,17 @@ func Setup(cfg config.Config, users *store.UserStore, upd *service.Updater) *gin
 		c.JSON(http.StatusOK, version.Current())
 	})
 
+	settingsH := handler.NewSettingsHandler(settings)
+
 	accounts := service.NewAccountService(users, cfg.JWTSecret)
 	authH := handler.NewAuthHandler(accounts, cfg.CookieSecure)
 	authMw := middleware.Auth(accounts) // *service.AccountService 满足窄接口 Authenticator
 
 	v1 := r.Group("/api/v1")
-	// TODO(限流)：注册/登录挂 IP 级限流 + 账号级失败锁定（参照主仓库 middleware/limiter.go 的 go-redis 方案）；
+	// 公开站点开关：前端渲染依据
+	v1.GET("/settings", settingsH.Public)
+
+	// TODO(限流)：登录/注册挂 IP 级限流 + 账号级失败锁定（参照主仓库 middleware/limiter.go 的 go-redis 方案）；
 	// 落地时做成独立中间件，经窄接口注入，不侵入 handler/service
 	v1.POST("/users", authH.Register) // 注册
 	v1.POST("/sessions", authH.Login) // 登录（创建会话）
@@ -44,6 +49,7 @@ func Setup(cfg config.Config, users *store.UserStore, upd *service.Updater) *gin
 
 	// 站长后台：Auth + Admin（角色每请求查库，变更即时生效）
 	admin := v1.Group("/admin", authMw, middleware.Admin())
+	admin.PUT("/settings", settingsH.Update) // 站点开关
 	updateH := handler.NewUpdateHandler(upd)
 	admin.GET("/update", updateH.Status)        // 状态与最近日志（前端轮询）
 	admin.POST("/update/checks", updateH.Check) // 检查新版本

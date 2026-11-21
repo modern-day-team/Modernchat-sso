@@ -32,6 +32,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// 站点开关（system_settings）：注册/邮箱验证/维护模式/登录锁定等运营开关
+	settings := store.NewSettingStore(db)
+
 	// 在线更新（站长侧）：WEB_UPDATE=false 整体关闭；可用性由 Updater.Available()
 	// 检测（systemd 模板单元 + bin/ 下二进制）。更新源优先 RELEASE_API_URL/RELEASE_DL_URL，
 	// 未配置时按 RELEASE_REPO_GITHUB 或默认官方仓库派生 GitHub Release 地址。
@@ -58,7 +61,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           router.Setup(cfg, store.NewUserStore(db), upd),
+		Handler:           router.Setup(cfg, store.NewUserStore(db), settings, upd),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
