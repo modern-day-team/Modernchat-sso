@@ -12,14 +12,20 @@ import (
 	"github.com/modern-day-team/Modernchat-sso/server/internal/middleware"
 	"github.com/modern-day-team/Modernchat-sso/server/internal/service"
 	"github.com/modern-day-team/Modernchat-sso/server/internal/store"
+	"github.com/modern-day-team/Modernchat-sso/server/internal/version"
 )
 
-// Setup 装配全部路由。
-func Setup(cfg config.Config, users *store.UserStore) *gin.Engine {
+// Setup 装配全部路由。upd 为在线更新服务（WEB_UPDATE=false 时传 nil，接口报不可用）。
+func Setup(cfg config.Config, users *store.UserStore, upd *service.Updater) *gin.Engine {
 	r := gin.Default()
 
 	r.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	// 版本信息（公开）：更新流程的前置自检与运维排查用
+	r.GET("/api/v1/version", func(c *gin.Context) {
+		c.JSON(http.StatusOK, version.Current())
 	})
 
 	accounts := service.NewAccountService(users, cfg.JWTSecret)
@@ -35,6 +41,13 @@ func Setup(cfg config.Config, users *store.UserStore) *gin.Engine {
 	authed := v1.Group("", authMw)
 	authed.GET("/users/me", authH.Me)                // 当前用户
 	authed.DELETE("/sessions/current", authH.Logout) // 登出（吊销全部旧 token）
+
+	// 站长后台：Auth + Admin（角色每请求查库，变更即时生效）
+	admin := v1.Group("/admin", authMw, middleware.Admin())
+	updateH := handler.NewUpdateHandler(upd)
+	admin.GET("/update", updateH.Status)        // 状态与最近日志（前端轮询）
+	admin.POST("/update/checks", updateH.Check) // 检查新版本
+	admin.POST("/update", updateH.Start)        // 发起更新任务
 
 	return r
 }

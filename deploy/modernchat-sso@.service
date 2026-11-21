@@ -1,0 +1,26 @@
+# systemd 模板单元：安装脚本把它复制到 /etc/systemd/system/modernchat-sso@.service，
+# 实例名 = 监听端口（如 systemctl enable --now modernchat-sso@8090）。
+# 在线更新（updater）依赖这个模板单元名做自重启，改名前先改 internal/service/updater.go。
+[Unit]
+Description=Modernchat SSO (port %i)
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# 安装布局与 Updater 约定一致：<root>/bin/ 下放二进制、<root>/server/.env 放配置
+WorkingDirectory=/opt/modernchat-sso/server
+ExecStart=/opt/modernchat-sso/bin/modernchat-sso-server
+EnvironmentFile=/opt/modernchat-sso/server/.env
+Restart=on-failure
+RestartSec=3
+# 服务内已做优雅停机（SIGTERM → 10s 排空）
+KillSignal=SIGTERM
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/modernchat-sso
+
+[Install]
+WantedBy=multi-user.target

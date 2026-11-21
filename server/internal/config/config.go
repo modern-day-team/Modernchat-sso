@@ -16,6 +16,13 @@ type Config struct {
 	JWTSecret    string // JWT 签名密钥
 	CookieSecure bool   // mc_auth cookie 是否带 Secure（生产必须 true）
 
+	// 在线更新（站长侧）：WEB_UPDATE=false 整体关闭；可用性另需 systemd 模板单元部署
+	WebUpdate         bool
+	ReleaseAPIURL     string // RELEASE_API_URL 显式 releases/latest API 地址
+	ReleaseDLURL      string // RELEASE_DL_URL 显式下载前缀（…/releases/download）
+	ReleaseRepoGitHub string // RELEASE_REPO_GITHUB 托管仓库（owner/repo）；API/DL 未配置时派生
+	GitHubToken       string // GITHUB_TOKEN 可选：防匿名 API 限流，支持私有仓库检查
+
 	// 邮件发送（邮箱验证用）：通道 + SMTP 参数；厂商 API 预留同一 Mailer 接口接入
 	MailProvider string // console（默认，仅本地开发）| smtp | tencent_ses
 	SMTPHost     string
@@ -53,6 +60,12 @@ func Load() (Config, error) {
 		DBDSN:        getEnv("DB_DSN", "root:modernchat_sso_dev@tcp(127.0.0.1:3307)/modernchat_sso?charset=utf8mb4&parseTime=true&loc=Local"),
 		JWTSecret:    os.Getenv("JWT_SECRET"),
 		CookieSecure: getEnv("COOKIE_SECURE", "false") == "true",
+
+		WebUpdate:         getEnv("WEB_UPDATE", "true") == "true",
+		ReleaseAPIURL:     os.Getenv("RELEASE_API_URL"),
+		ReleaseDLURL:      os.Getenv("RELEASE_DL_URL"),
+		ReleaseRepoGitHub: os.Getenv("RELEASE_REPO_GITHUB"),
+		GitHubToken:       os.Getenv("GITHUB_TOKEN"),
 	}
 	// 不提供不安全的默认值：宁可起不来，也不能用空/弱密钥签 token。
 	// ≥32 字节与主仓库生产要求一致（运维手册 §JWT_SECRET）

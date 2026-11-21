@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/modern-day-team/Modernchat-sso/server/internal/config"
 	"github.com/modern-day-team/Modernchat-sso/server/internal/router"
+	"github.com/modern-day-team/Modernchat-sso/server/internal/service"
 	"github.com/modern-day-team/Modernchat-sso/server/internal/store"
 )
 
@@ -30,9 +32,33 @@ func main() {
 		os.Exit(1)
 	}
 
+	// 在线更新（站长侧）：WEB_UPDATE=false 整体关闭；可用性由 Updater.Available()
+	// 检测（systemd 模板单元 + bin/ 下二进制）。更新源优先 RELEASE_API_URL/RELEASE_DL_URL，
+	// 未配置时按 RELEASE_REPO_GITHUB 或默认官方仓库派生 GitHub Release 地址。
+	var upd *service.Updater
+	if cfg.WebUpdate {
+		wd, wdErr := os.Getwd()
+		root := ""
+		if wdErr == nil {
+			root = filepath.Dir(wd)
+		}
+		upd = service.NewUpdater(root, cfg.Port, service.ReleaseSource{
+			API:   cfg.ReleaseAPIURL,
+			DL:    cfg.ReleaseDLURL,
+			Repo:  cfg.ReleaseRepoGitHub,
+			Token: cfg.GitHubToken,
+		})
+		if upd.Available() {
+			slog.Info("在线更新已启用", "repo", upd.Repo(), "root", upd.RootDir(), "port", upd.Port())
+		}
+	} else {
+		upd = service.NewUpdater("", cfg.Port, service.ReleaseSource{})
+		slog.Info("在线更新已关闭（WEB_UPDATE=false）")
+	}
+
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           router.Setup(cfg, store.NewUserStore(db)),
+		Handler:           router.Setup(cfg, store.NewUserStore(db), upd),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

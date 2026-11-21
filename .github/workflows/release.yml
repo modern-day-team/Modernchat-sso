@@ -1,0 +1,84 @@
+# ============================================================================
+# 自动发版：推送 v* tag → 构建双架构发行包 → 发布 GitHub Release
+#
+# 产物（作为 Release 附件上传，供在线更新 updater 消费）：
+#   modernchat-sso-<版本>-linux-amd64.tar.gz + .sha256
+#   modernchat-sso-<版本>-linux-arm64.tar.gz + .sha256
+# 包内容：bin/modernchat-sso-server、web/dist、server/.env.example、deploy/
+#
+# 版本号基准 = CHANGELOG.md 最新正式版本（发版前先更新它并对齐 web/package.json）。
+# 服务端在线更新会对比 git tag 与编译期注入的 version.Version（ldflags 注入）。
+# ============================================================================
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+# 创建 Release 与上传附件需要写权限
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Go（版本取自 go.mod）
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      - name: 安装 Node 24（构建门户 dist）
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: 安装前端依赖
+        working-directory: web
+        run: npm ci
+
+      - name: 构建前端
+        working-directory: web
+        run: npm run build
+
+      # 经 env 间接引用 tag 名，避免 ${{ }} 直接插入 shell 带来注入面
+      - name: 构建双架构后端并打包
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          VER="${TAG_NAME#v}"
+          COMMIT="${GITHUB_SHA::7}"
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          LDFLAGS="-s -w -X github.com/modern-day-team/Modernchat-sso/server/internal/version.Version=${TAG_NAME} -X github.com/modern-day-team/Modernchat-sso/server/internal/version.Commit=${COMMIT} -X github.com/modern-day-team/Modernchat-sso/server/internal/version.BuildTime=${BUILD_TIME}"
+          mkdir -p dist-release
+          for ARCH in amd64 arm64; do
+            STAGING="staging/linux-${ARCH}"
+            mkdir -p "${STAGING}/bin"
+            CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} go build -trimpath -ldflags "${LDFLAGS}" \
+              -o "${STAGING}/bin/modernchat-sso-server" ./server/cmd/server
+            cp -r web/dist "${STAGING}/web-dist-tmp"
+            mkdir -p "${STAGING}/web" "${STAGING}/server" "${STAGING}/deploy"
+            mv "${STAGING}/web-dist-tmp" "${STAGING}/web/dist"
+            cp server/.env.example "${STAGING}/server/.env.example"
+            cp -r deploy "${STAGING}/deploy"
+            tar -czf "dist-release/modernchat-sso-${VER}-linux-${ARCH}.tar.gz" -C "${STAGING}" .
+            sha256sum "dist-release/modernchat-sso-${VER}-linux-${ARCH}.tar.gz" \
+              > "dist-release/modernchat-sso-${VER}-linux-${ARCH}.tar.gz.sha256"
+          done
+          ls -la dist-release/
+
+      - name: 发布 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          # Release 已存在（如重跑 / 手动建过）时退化为覆盖上传附件，保证可重复执行
+          gh release create "$TAG_NAME" --title "$TAG_NAME" --generate-notes dist-release/* \
+            || gh release upload "$TAG_NAME" --clobber dist-release/*

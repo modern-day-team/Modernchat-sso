@@ -8,4 +8,6 @@
 - 前端门户 `web/`：Vue 3 + Vite 8 + TS + Pinia + UnoCSS 原子类 + 自研 `Ui*` 控件层（UiInput/UiButton/UiCheckbox/UiTag，与主仓库逐字对齐），tdesign 仅认证表单；完整 `--td-*`/`--mc-*` 令牌（动效/字号/圆角/阴影/暗色）；dev :5175
 - CI：GitHub Actions 双端工作流（server gofmt/vet/build/test -race + 挂 MySQL 服务；web oxlint/eslint/build），push 与 PR 触发
 - 邮件发送层：可插拔 `Mailer` 接口，**多厂商故障转移链**——`MAIL_PROVIDER` 逗号分隔多通道（如 `tencent_ses,smtp`），按序降级、错误聚合；内置 console / SMTP / 腾讯云 SES 三通道，其他厂商按同接口扩展
+- 在线更新：站长侧 `GET/POST /api/v1/admin/update*`（移植主仓库发行版模式：GitHub Release → sha256 fail-closed → 原子替换 → systemd 重启）；公开 `GET /api/v1/version`；`deploy/modernchat-sso@.service` systemd 模板单元
+- 发版工作流：推送 `v*` tag 自动构建 linux amd64/arm64 发行包（含 web/dist）并发布 GitHub Release，版本号 ldflags 注入
 - 本地开发环境：docker-compose MySQL 8（3307）、`.env.example`、仓库强制 LF
