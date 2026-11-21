@@ -14,12 +14,27 @@ type Config struct {
 	DBDSN        string // MySQL 连接串
 	JWTSecret    string // JWT 签名密钥
 	CookieSecure bool   // mc_auth cookie 是否带 Secure（生产必须 true）
+
+	// 邮件发送（邮箱验证用）：通道 + SMTP 参数；厂商 API 预留同一 Mailer 接口接入
+	MailProvider string // console（默认，仅本地开发）| smtp
+	SMTPHost     string
+	SMTPPort     string // 465 隐式 TLS；587/25 STARTTLS
+	SMTPUser     string
+	SMTPPass     string
+	SMTPFrom     string
 }
 
 // Load 读取配置；.env 不存在时静默跳过（生产用环境变量注入）。
 func Load() (Config, error) {
 	_ = godotenv.Load()
 	cfg := Config{
+		MailProvider: getEnv("MAIL_PROVIDER", "console"),
+		SMTPHost:     os.Getenv("SMTP_HOST"),
+		SMTPPort:     getEnv("SMTP_PORT", "465"),
+		SMTPUser:     os.Getenv("SMTP_USER"),
+		SMTPPass:     os.Getenv("SMTP_PASS"),
+		SMTPFrom:     os.Getenv("SMTP_FROM"),
+
 		Port:         getEnv("PORT", "8090"),
 		DBDSN:        getEnv("DB_DSN", "root:modernchat_sso_dev@tcp(127.0.0.1:3307)/modernchat_sso?charset=utf8mb4&parseTime=true&loc=Local"),
 		JWTSecret:    os.Getenv("JWT_SECRET"),
