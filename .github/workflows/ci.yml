@@ -1,0 +1,97 @@
+# CI 工作流：server（Go）与 web（Vue）双端检查
+#
+# - server：gofmt 格式检查 → go vet → go build → go test（-race）
+#   挂 MySQL 8 服务容器并通过 DB_DSN 注入，供未来的单元/集成测试直接使用
+#   （主仓库教训：连不上库会 t.Skip 且 go test 仍报 ok，这里库是现成的，别让测试空转）
+# - web：oxlint / eslint（只检查不改文件）→ npm run build（内含 vue-tsc 类型检查）
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+# 同一分支的新推送取消仍在跑的旧运行，省配额
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    name: Server（Go）
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: modernchat_sso_dev
+          MYSQL_DATABASE: modernchat_sso_test
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pmodernchat_sso_dev"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
+    env:
+      DB_DSN: root:modernchat_sso_dev@tcp(127.0.0.1:3307)/modernchat_sso_test?charset=utf8mb4&parseTime=true&loc=Local
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Go（版本取自 go.mod）
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      - name: gofmt 格式检查
+        working-directory: server
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "以下文件未通过 gofmt 格式检查："
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet 静态检查
+        working-directory: server
+        run: go vet ./...
+
+      - name: go build
+        working-directory: server
+        run: go build ./...
+
+      - name: go test（含竞态检测）
+        working-directory: server
+        run: go test ./... -race -count=1
+
+  web:
+    name: Web（Vue）
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: 安装依赖
+        working-directory: web
+        run: npm ci
+
+      - name: oxlint / eslint（只检查不改文件）
+        working-directory: web
+        run: |
+          npx oxlint .
+          npx eslint .
+
+      - name: 类型检查 + 构建
+        working-directory: web
+        run: npm run build
