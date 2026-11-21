@@ -44,57 +44,51 @@ func (s *EmailCodeStore) hash(email, purpose, code string) string {
 }
 
 // Issue 生成 6 位验证码并落哈希。返回 (code, retryAfter, err)：
-// 冷却期内返回 ("", 剩余秒数, nil)，调用方不下发邮件（防轰炸）。
-// 单行 (email,purpose)：冷却过期后原行重置（清 attempts/used_at）；并发首发视为冷却。
+// 冷却期内返回 ("", 60, nil)，调用方不下发邮件（防轰炸）。
+// 冷却检查用 SQL 级时间比较（避免回读 created_at 的时区/精度坑，CI 实测踩坑后重构）；
+// 单行 (email,purpose) 用 ON DUPLICATE KEY UPDATE 原子 upsert（并发安全，无需 FOR UPDATE）。
 func (s *EmailCodeStore) Issue(email, purpose string) (string, time.Duration, error) {
+	now := time.Now()
+	var recent int64
+	if err := s.db.Model(&model.EmailCode{}).
+		Where("email = ? AND purpose = ? AND created_at > ?", email, purpose, now.Add(-EmailCodeCooldown)).
+		Count(&recent).Error; err != nil {
+		return "", 0, err
+	}
+	if recent > 0 {
+		return "", EmailCodeCooldown, nil
+	}
+
 	n, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		return "", 0, err
 	}
 	code := fmt.Sprintf("%06d", n.Int64())
 	codeHash := s.hash(email, purpose, code)
-	now := time.Now()
-	var retryAfter time.Duration
 
-	err = s.db.Transaction(func(tx *gorm.DB) error {
-		var last model.EmailCode
-		rowErr := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("email = ? AND purpose = ?", email, purpose).Limit(1).First(&last).Error
-		switch {
-		case errors.Is(rowErr, gorm.ErrRecordNotFound):
-			cr := tx.Create(&model.EmailCode{
-				Email: email, CodeHash: codeHash, Purpose: purpose,
-				ExpiresAt: now.Add(EmailCodeTTL),
-			})
-			if cr.Error != nil {
-				return cr.Error
-			}
-			// 并发首发撞唯一索引（INSERT IGNORE 生效）：按冷却处理
-			if cr.RowsAffected == 0 {
-				retryAfter = EmailCodeCooldown
-			}
-			return nil
-		case rowErr != nil:
-			return rowErr
-		}
-		if elapsed := now.Sub(last.CreatedAt); elapsed < EmailCodeCooldown {
-			retryAfter = EmailCodeCooldown - elapsed
-			return nil
-		}
-		// 冷却过期：原行重置（清错误计数与已用标记）
-		return tx.Model(&last).Updates(map[string]any{
+	// 首发走 INSERT，冷却过期/并发撞索引走 UPDATE（原子，均为单行）
+	cr := s.db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "email"}, {Name: "purpose"}},
+		DoUpdates: clause.Assignments(map[string]any{
 			"code_hash":  codeHash,
 			"attempts":   0,
 			"used_at":    nil,
 			"expires_at": now.Add(EmailCodeTTL),
 			"created_at": now,
-		}).Error
+		}),
+	}).Create(&model.EmailCode{
+		Email:     email,
+		CodeHash:  codeHash,
+		Purpose:   purpose,
+		ExpiresAt: now.Add(EmailCodeTTL),
+		CreatedAt: now,
 	})
-	if err != nil {
-		return "", 0, err
+	if cr.Error != nil {
+		return "", 0, cr.Error
 	}
-	if code == "" {
-		return "", retryAfter, nil
+	if cr.RowsAffected == 0 {
+		// 理论不可达（哈希每次变化）：并发撞冷却兜底
+		return "", EmailCodeCooldown, nil
 	}
 	// 顺手清理 24h 前的旧行
 	s.db.Where("created_at < ?", now.Add(-emailCodePurgeAfter)).Delete(&model.EmailCode{})
