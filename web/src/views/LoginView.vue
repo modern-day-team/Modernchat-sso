@@ -2,16 +2,12 @@
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import {
-  Button as TButton,
-  Form as TForm,
-  FormItem as TFormItem,
-  Input as TInput,
-  MessagePlugin,
-} from 'tdesign-vue-next'
+import { Form as TForm, FormItem as TFormItem, MessagePlugin } from 'tdesign-vue-next'
 import type { FormProps } from 'tdesign-vue-next'
 
 import { ApiError } from '@/api/client'
+import UiButton from '@/components/ui/UiButton.vue'
+import UiInput from '@/components/ui/UiInput.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
@@ -55,14 +51,14 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
     <h1 class="auth-card__title">{{ t('auth.welcomeBack') }}</h1>
     <TForm :data="form" :rules="rules" label-width="0" @submit="onSubmit">
       <TFormItem name="username">
-        <TInput v-model="form.username" :placeholder="t('auth.username')" clearable />
+        <UiInput v-model="form.username" :placeholder="t('auth.username')" clearable />
       </TFormItem>
       <TFormItem name="password">
-        <TInput v-model="form.password" type="password" :placeholder="t('auth.password')" clearable />
+        <UiInput v-model="form.password" type="password" :placeholder="t('auth.password')" clearable />
       </TFormItem>
-      <TButton theme="primary" type="submit" block :loading="loading">
+      <UiButton theme="primary" type="submit" block :loading="loading">
         {{ t('auth.login') }}
-      </TButton>
+      </UiButton>
     </TForm>
     <p class="auth-card__footer">
       <router-link to="/register">{{ t('auth.toRegister') }}</router-link>
@@ -76,12 +72,12 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
   max-width: 360px;
   background: var(--td-bg-color-container);
   border: 1px solid var(--mc-hairline);
-  border-radius: var(--td-radius-large);
+  border-radius: var(--mc-radius-lg);
   padding: 32px 28px;
 }
 
 .auth-card__title {
-  font-size: 20px;
+  font-size: var(--mc-fs-heading);
   font-weight: 600;
   text-align: center;
   margin: 0 0 24px;
@@ -89,13 +85,8 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
 
 .auth-card__footer {
   text-align: center;
-  font-size: 13px;
+  font-size: var(--mc-fs-sm);
   color: var(--td-text-color-secondary);
   margin-top: 16px;
-}
-
-.auth-card__footer a {
-  color: var(--td-brand-color);
-  text-decoration: none;
 }
 </style>

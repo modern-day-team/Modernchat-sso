@@ -2,8 +2,10 @@
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Button as TButton, MessagePlugin } from 'tdesign-vue-next'
+import { MessagePlugin } from 'tdesign-vue-next'
 
+import UiButton from '@/components/ui/UiButton.vue'
+import UiTag from '@/components/ui/UiTag.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
@@ -31,13 +33,16 @@ async function onLogout() {
       </span>
       <div class="home-user__meta">
         <div class="home-user__name">{{ auth.user?.nickname }}（@{{ auth.user?.username }}）</div>
-        <div class="home-user__sub">{{ auth.user?.email || t('home.noEmail') }} · {{ auth.user?.role }}</div>
+        <div class="home-user__sub">{{ auth.user?.email || t('home.noEmail') }}</div>
       </div>
+      <UiTag :theme="auth.user?.role === 'admin' ? 'primary' : 'default'">
+        {{ auth.user?.role }}
+      </UiTag>
     </div>
     <p class="home-hint">{{ t('home.hint') }}</p>
-    <TButton theme="danger" variant="outline" block @click="onLogout">
+    <UiButton theme="danger" variant="outline" block @click="onLogout">
       {{ t('home.logout') }}
-    </TButton>
+    </UiButton>
   </main>
 </template>
 
@@ -47,12 +52,12 @@ async function onLogout() {
   max-width: 400px;
   background: var(--td-bg-color-container);
   border: 1px solid var(--mc-hairline);
-  border-radius: var(--td-radius-large);
+  border-radius: var(--mc-radius-lg);
   padding: 32px 28px;
 }
 
 .auth-card__title {
-  font-size: 20px;
+  font-size: var(--mc-fs-heading);
   font-weight: 600;
   text-align: center;
   margin: 0 0 24px;
@@ -63,7 +68,7 @@ async function onLogout() {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border-radius: var(--td-radius-medium);
+  border-radius: var(--mc-radius-md);
   background: var(--td-bg-color-secondarycontainer);
 }
 
@@ -79,17 +84,23 @@ async function onLogout() {
   flex-shrink: 0;
 }
 
+.home-user__meta {
+  flex: 1;
+  min-width: 0;
+}
+
 .home-user__name {
+  font-size: var(--mc-fs-emphasis);
   font-weight: 600;
 }
 
 .home-user__sub {
-  font-size: 13px;
+  font-size: var(--mc-fs-sm);
   color: var(--td-text-color-secondary);
 }
 
 .home-hint {
-  font-size: 13px;
+  font-size: var(--mc-fs-sm);
   color: var(--td-text-color-secondary);
   line-height: 1.6;
   margin: 16px 0 20px;
