@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { MessagePlugin } from 'tdesign-vue-next'
 
 import { adminApi } from '@/api'
 import { ApiError } from '@/api/client'
 import UiButton from '@/components/ui/UiButton.vue'
+import UiDialog from '@/components/ui/UiDialog.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiTag from '@/components/ui/UiTag.vue'
 import type { User } from '@/types'
 
 const { t } = useI18n()
+const router = useRouter()
 
 const users = ref<User[]>([])
 const total = ref(0)
@@ -42,24 +45,41 @@ function isBanned(u: User): boolean {
   return !!u.bannedUntil && new Date(u.bannedUntil).getTime() > Date.now()
 }
 
-/** 封禁：天数（0=永久）与原因走浏览器提示框（TODO：移植 UiDialog 后替换） */
+// 封禁对话框：天数（0=永久）与原因一次填完，替换浏览器原生 prompt
+const banVisible = ref(false)
+const banTarget = ref<User | null>(null)
+const banDaysText = ref('0')
+const banReason = ref('')
+const banSaving = ref(false)
+
 function onBan(u: User) {
-  const daysStr = window.prompt(t('admin.banPrompt'))
-  if (daysStr === null) return
-  const days = Number(daysStr)
+  banTarget.value = u
+  banDaysText.value = '0'
+  banReason.value = ''
+  banVisible.value = true
+}
+
+function onBanConfirm() {
+  const u = banTarget.value
+  if (!u || banSaving.value) return
+  const days = Number(banDaysText.value.trim())
   if (!Number.isInteger(days) || days < 0 || days > 3650) {
     MessagePlugin.warning(t('admin.banInvalid'))
     return
   }
-  const reason = window.prompt(t('admin.reasonPrompt')) ?? ''
+  banSaving.value = true
   adminApi
-    .ban(u.id, days, reason)
+    .ban(u.id, days, banReason.value.trim())
     .then(() => {
+      banVisible.value = false
       MessagePlugin.success(t('admin.opDone'))
       void load()
     })
     .catch((e: unknown) => {
       MessagePlugin.error(e instanceof ApiError ? e.message : t('auth.failed'))
+    })
+    .finally(() => {
+      banSaving.value = false
     })
 }
 
@@ -106,7 +126,12 @@ onMounted(() => {
 
 <template>
   <main class="admin-page">
-    <h1 class="admin-page__title">{{ t('admin.title') }}</h1>
+    <div class="settings-head">
+      <h1 class="admin-page__title">{{ t('admin.title') }}</h1>
+      <UiButton variant="outline" size="small" @click="router.push('/admin/settings')">
+        {{ t('admin.siteSettings') }}
+      </UiButton>
+    </div>
     <div class="admin-toolbar">
       <UiInput v-model="kw" :placeholder="t('admin.searchPlaceholder')" clearable @enter="search" />
       <UiButton variant="outline" @click="search">{{ t('admin.search') }}</UiButton>
@@ -166,6 +191,23 @@ onMounted(() => {
         {{ t('admin.next') }}
       </UiButton>
     </div>
+
+    <UiDialog
+      v-model:visible="banVisible"
+      :header="t('admin.banTitle', { name: banTarget?.nickname ?? '' })"
+      width="420"
+      :confirm-btn="{ content: t('admin.ban'), theme: 'danger' }"
+      :confirm-btn-loading="banSaving"
+      @confirm="onBanConfirm"
+    >
+      <div class="ban-form">
+        <label class="ban-form__label" for="ban-days">{{ t('admin.banPrompt') }}</label>
+        <UiInput id="ban-days" v-model="banDaysText" />
+        <label class="ban-form__label" for="ban-reason">{{ t('admin.reasonPrompt') }}</label>
+        <UiInput id="ban-reason" v-model="banReason" :maxlength="200" />
+        <p class="ban-form__hint">{{ t('admin.banInvalid') }}</p>
+      </div>
+    </UiDialog>
   </main>
 </template>
 
@@ -179,10 +221,18 @@ onMounted(() => {
   padding: 24px;
 }
 
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
 .admin-page__title {
   font-size: var(--mc-fs-heading);
   font-weight: 600;
-  margin: 0 0 16px;
+  margin: 0;
 }
 
 .admin-toolbar {
@@ -228,6 +278,24 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 12px;
   margin-top: 12px;
+  font-size: var(--mc-fs-sm);
+  color: var(--td-text-color-secondary);
+}
+
+.ban-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0 8px;
+}
+
+.ban-form__label {
+  font-size: var(--mc-fs-body);
+  color: var(--td-text-color-primary);
+}
+
+.ban-form__hint {
+  margin: 0;
   font-size: var(--mc-fs-sm);
   color: var(--td-text-color-secondary);
 }

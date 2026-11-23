@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -24,6 +25,29 @@ type opsView struct {
 	RequireEmailVerify bool `json:"requireEmailVerify"`
 }
 
+// adminView GET/PUT /api/v1/admin/settings 的完整响应：站长需要回填全部开关。
+type adminView struct {
+	AllowRegister      bool   `json:"allowRegister"`
+	RequireEmailVerify bool   `json:"requireEmailVerify"`
+	RequireInviteCode  bool   `json:"requireInviteCode"`
+	MaintenanceMode    bool   `json:"maintenanceMode"`
+	MaintenanceMessage string `json:"maintenanceMessage"`
+	LoginMaxAttempts   int    `json:"loginMaxAttempts"`
+	LoginLockMinutes   int    `json:"loginLockMinutes"`
+}
+
+func toAdminView(ops store.Ops) adminView {
+	return adminView{
+		AllowRegister:      ops.AllowRegister,
+		RequireEmailVerify: ops.RequireEmailVerify,
+		RequireInviteCode:  ops.RequireInviteCode,
+		MaintenanceMode:    ops.MaintenanceMode,
+		MaintenanceMessage: ops.MaintenanceMessage,
+		LoginMaxAttempts:   ops.LoginMaxAttempts,
+		LoginLockMinutes:   ops.LoginLockMinutes,
+	}
+}
+
 // Public 公开读取站点开关。
 func (h *SettingsHandler) Public(c *gin.Context) {
 	ops := store.DefaultOps()
@@ -34,6 +58,15 @@ func (h *SettingsHandler) Public(c *gin.Context) {
 		AllowRegister:      ops.AllowRegister,
 		RequireEmailVerify: ops.RequireEmailVerify,
 	})
+}
+
+// AdminGet 站长读取完整站点开关（含维护模式与登录锁定参数），供后台表单回填。
+func (h *SettingsHandler) AdminGet(c *gin.Context) {
+	ops := store.DefaultOps()
+	if h.settings != nil {
+		ops = h.settings.Ops()
+	}
+	c.JSON(http.StatusOK, toAdminView(ops))
 }
 
 // updateReq PUT /api/v1/admin/settings 的请求体。
@@ -80,12 +113,23 @@ func (h *SettingsHandler) Update(c *gin.Context) {
 	if req.LoginLockMinutes != nil {
 		ops.LoginLockMinutes = *req.LoginLockMinutes
 	}
+	ops.MaintenanceMessage = strings.TrimSpace(ops.MaintenanceMessage)
+	// 校验口径对齐主仓库 admin_settings.go：维护提示 ≤200 字、失败阈值 0 或 2-20、锁定时长 1-1440 分钟
+	if n := len([]rune(ops.MaintenanceMessage)); n > 200 {
+		fail(c, http.StatusBadRequest, "维护提示最多 200 个字符")
+		return
+	}
+	if v := ops.LoginMaxAttempts; v != 0 && (v < 2 || v > 20) {
+		fail(c, http.StatusBadRequest, "登录失败次数阈值需为 0（关闭）或 2-20")
+		return
+	}
+	if v := ops.LoginLockMinutes; v < 1 || v > 1440 {
+		fail(c, http.StatusBadRequest, "登录锁定时长需为 1-1440 分钟")
+		return
+	}
 	if err := h.settings.UpdateOps(ops); err != nil {
 		fail(c, http.StatusInternalServerError, "服务器开小差了，请稍后再试")
 		return
 	}
-	c.JSON(http.StatusOK, opsView{
-		AllowRegister:      ops.AllowRegister,
-		RequireEmailVerify: ops.RequireEmailVerify,
-	})
+	c.JSON(http.StatusOK, toAdminView(ops))
 }

@@ -66,7 +66,8 @@ func Setup(cfg config.Config, db *gorm.DB, upd *service.Updater) *gin.Engine {
 
 	// 站长后台：Auth + Admin（角色每请求查库，变更即时生效）
 	admin := v1.Group("/admin", authMw, middleware.Admin())
-	admin.PUT("/settings", settingsH.Update) // 站点开关
+	admin.GET("/settings", settingsH.AdminGet) // 读取完整站点开关（后台表单回填）
+	admin.PUT("/settings", settingsH.Update)   // 修改站点开关
 	adminUsersH := handler.NewAdminUsersHandler(service.NewAdminService(users, loginAttempts))
 	admin.GET("/users", adminUsersH.List)                              // 用户分页列表
 	admin.POST("/users/:id/ban", adminUsersH.Ban)                      // 封禁（tv+1）

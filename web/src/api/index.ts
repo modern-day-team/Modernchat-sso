@@ -55,8 +55,24 @@ export const adminApi = {
     http.post<{ ok: true }>(`/admin/users/${id}/role`, { role }),
 }
 
-/** 站点开关（公开）：前端渲染依据 */
+/** 站点设置（完整结构，与后端 handler/settings.go 的 adminView 一一对应） */
+export interface SiteSettings {
+  allowRegister: boolean
+  requireEmailVerify: boolean
+  requireInviteCode: boolean
+  maintenanceMode: boolean
+  maintenanceMessage: string
+  /** 0 = 关闭账号级失败锁定 */
+  loginMaxAttempts: number
+  loginLockMinutes: number
+}
+
+/** 站点开关：公开读取用于前端渲染，站长读写用于后台设置页 */
 export const settingsApi = {
   get: () =>
-    http.get<{ allowRegister: boolean; requireEmailVerify: boolean }>('/settings'),
+    http.get<Pick<SiteSettings, 'allowRegister' | 'requireEmailVerify'>>('/settings'),
+  /** 站长读取完整设置（后台表单回填） */
+  getAdmin: () => http.get<SiteSettings>('/admin/settings'),
+  /** 站长保存设置（字段可选，后端 nil 字段保持原值；此处提交完整表单） */
+  update: (body: SiteSettings) => http.put<SiteSettings>('/admin/settings', body),
 }

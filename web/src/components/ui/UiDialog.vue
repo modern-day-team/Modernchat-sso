@@ -1,0 +1,260 @@
+<script setup lang="ts">
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+import UiButton from './UiButton.vue'
+
+/**
+ * 模态对话框（UnoCSS 实现，对齐主仓库 UiDialog 的对外 API）。
+ *
+ * - `v-model:visible`、`header`、`width`、`footer`
+ * - 关闭途径：右上角 ×、点遮罩、Esc；关闭后把焦点还给打开前的元素
+ * - 弹窗内 Tab 循环，键盘用户不会 Tab 到背景页
+ */
+const props = withDefaults(
+  defineProps<{
+    visible?: boolean
+    header?: string
+    width?: string | number
+    footer?: boolean
+    confirmBtn?: { content?: string; theme?: 'primary' | 'danger' | 'default' }
+    confirmBtnLoading?: boolean
+    cancelBtn?: string
+  }>(),
+  { footer: true, width: 480, confirmBtnLoading: false },
+)
+
+const emit = defineEmits<{
+  'update:visible': [value: boolean]
+  confirm: []
+  close: []
+}>()
+
+const { t } = useI18n()
+const panelEl = ref<HTMLElement | null>(null)
+let restoreFocus: HTMLElement | null = null
+
+const widthStyle = computed(() =>
+  typeof props.width === 'number' ? `${props.width}px` : props.width,
+)
+const confirmTheme = computed<'primary' | 'danger' | 'default'>(() => props.confirmBtn?.theme ?? 'primary')
+
+function close() {
+  emit('update:visible', false)
+  emit('close')
+}
+
+function onConfirm() {
+  if (props.confirmBtnLoading) return
+  emit('confirm')
+}
+
+let scrollLocked = false
+const originalOverflow = ref('')
+
+function handleTabKey(e: KeyboardEvent, root: HTMLElement | null) {
+  if (!root) return
+  const focusable = Array.from(
+    root.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((el) => el.offsetParent !== null)
+  if (focusable.length === 0) return
+  const first = focusable[0]!
+  const last = focusable[focusable.length - 1]!
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault()
+    last.focus()
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault()
+    first.focus()
+  }
+}
+
+function onKeydown(e: KeyboardEvent) {
+  if (!props.visible) return
+  if (e.key === 'Escape') {
+    close()
+    return
+  }
+  handleTabKey(e, panelEl.value)
+}
+
+watch(
+  () => props.visible,
+  async (v) => {
+    if (v) {
+      restoreFocus = document.activeElement as HTMLElement | null
+      if (!scrollLocked) {
+        originalOverflow.value = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        scrollLocked = true
+      }
+      await nextTick()
+      panelEl.value?.focus()
+    } else {
+      if (scrollLocked) {
+        document.body.style.overflow = originalOverflow.value
+        scrollLocked = false
+      }
+      restoreFocus?.focus?.()
+      restoreFocus = null
+    }
+  },
+)
+
+onMounted(() => document.addEventListener('keydown', onKeydown))
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKeydown)
+  if (scrollLocked) {
+    document.body.style.overflow = originalOverflow.value
+    scrollLocked = false
+  }
+})
+</script>
+
+<template>
+  <Teleport to="body">
+    <Transition name="ui-dlg">
+      <div v-if="visible" class="ui-dialog__mask" @click.self="close">
+        <div
+          ref="panelEl"
+          class="ui-dialog"
+          role="dialog"
+          aria-modal="true"
+          tabindex="-1"
+          :style="{ width: widthStyle }"
+        >
+          <header v-if="header" class="ui-dialog__head">
+            <span class="ui-dialog__title">{{ header }}</span>
+            <button
+              type="button"
+              class="ui-dialog__close"
+              :aria-label="t('common.close')"
+              @click="close"
+            >
+              ×
+            </button>
+          </header>
+
+          <div class="ui-dialog__body">
+            <slot />
+          </div>
+
+          <footer v-if="footer" class="ui-dialog__foot">
+            <UiButton variant="outline" @click="close">
+              {{ cancelBtn ?? t('common.cancel') }}
+            </UiButton>
+            <UiButton :theme="confirmTheme" :loading="confirmBtnLoading" @click="onConfirm">
+              {{ confirmBtn?.content ?? t('common.confirm') }}
+            </UiButton>
+          </footer>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+</template>
+
+<style scoped>
+.ui-dialog__mask {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.ui-dialog {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  max-height: calc(100vh - 48px);
+  border-radius: var(--mc-radius-xl);
+  background: var(--mc-material);
+  backdrop-filter: var(--mc-blur);
+  box-shadow: var(--mc-elev-3);
+  outline: none;
+}
+
+.ui-dialog__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 18px 8px;
+}
+
+.ui-dialog__title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--mc-fs-title);
+  font-weight: 600;
+  color: var(--td-text-color-primary);
+}
+
+.ui-dialog__close {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--mc-radius-sm);
+  background: transparent;
+  color: var(--td-text-color-placeholder);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ui-dialog__close:hover {
+  background: var(--td-bg-color-container-hover);
+  color: var(--td-text-color-primary);
+}
+
+.ui-dialog__body {
+  padding: 8px 18px 4px;
+  overflow: auto;
+  color: var(--td-text-color-primary);
+  font-size: var(--mc-fs-body);
+}
+
+.ui-dialog__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 18px;
+}
+
+.ui-dlg-enter-active,
+.ui-dlg-leave-active {
+  transition: opacity var(--mc-dur-base) var(--mc-ease-in-out);
+}
+
+.ui-dlg-enter-active .ui-dialog,
+.ui-dlg-leave-active .ui-dialog {
+  transition: transform var(--mc-dur-base) var(--mc-ease-in-out);
+}
+
+.ui-dlg-enter-from,
+.ui-dlg-leave-to {
+  opacity: 0;
+}
+
+.ui-dlg-enter-from .ui-dialog,
+.ui-dlg-leave-to .ui-dialog {
+  transform: scale(0.96) translateY(-6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-dlg-enter-active,
+  .ui-dlg-leave-active,
+  .ui-dlg-enter-active .ui-dialog,
+  .ui-dlg-leave-active .ui-dialog {
+    transition: none;
+  }
+}
+</style>

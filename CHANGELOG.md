@@ -1,5 +1,13 @@
 # Changelog
 
+## [未发布]
+
+- 站长后台补齐站点设置页（`/admin/settings`）：注册开关（允许注册 / 邀请码 / 邮箱验证）、维护模式与提示文案、登录失败锁定阈值与时长，共 7 项；保存即时生效
+- 新增 `GET /api/v1/admin/settings` 返回完整开关（此前公开 GET 与 PUT 仅回 2 个字段，站长无法读取其余 5 项）；PUT 响应同步改为完整视图
+- 补齐站点设置的服务端校验：维护提示 ≤200 字、失败阈值 0（关闭）或 2-20、锁定时长 1-1440 分钟（对齐主仓库口径）
+- 新增自研 `UiDialog` 控件（v-model:visible / Esc / 遮罩关闭 / 焦点与滚动管理），封禁操作改用对话框一次填写天数与原因，移除 `window.prompt`
+- 中英文文案同步（对话框通用按钮、封禁标题、站点设置全字段）
+
 ## 0.1.0（2026-11-21）
 
 - 项目骨架：Go 1.26 + Gin + GORM（MySQL 8），分层 `config / model / store / service / token / apperr / handler / middleware / router`（高内聚低耦合：业务规则内聚 service，传输层经窄接口依赖，apperr 哨兵解耦错误语义）

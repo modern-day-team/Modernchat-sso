@@ -39,7 +39,8 @@ cd ../web && npm install && npm run dev   # :5175，/api 已代理到 :8090
 | POST | `/api/v1/password-resets/:token` | 重置密码（单次令牌，tv bump） |
 | PATCH | `/api/v1/users/me/password` | 自身改密（tv bump） |
 | GET | `/api/v1/version` | 构建版本（公开） |
-| PUT | `/api/v1/admin/settings` | 站点开关修改（站长） |
+| GET | `/api/v1/admin/settings` | 读取完整站点开关（站长；表单回填用，含维护模式与登录锁定参数） |
+| PUT | `/api/v1/admin/settings` | 站点开关修改（站长；7 项字段，nil 保持原值，响应返回完整视图） |
 | GET | `/api/v1/admin/users` | 用户分页列表（站长） |
 | POST | `/api/v1/admin/users/:id/{ban,unban,reset-password,role}` | 用户管理（站长） |
 | GET | `/api/v1/admin/update` | 更新状态与最近日志（站长） |
@@ -47,6 +48,8 @@ cd ../web && npm install && npm run dev   # :5175，/api 已代理到 :8090
 | POST | `/api/v1/admin/update` | 发起更新任务 |
 
 完整契约（含参数与响应字段）见 [AGENTS.md](AGENTS.md) §API 契约；错误统一 `{"error": "<中文消息>"}`，JSON camelCase，时间 ISO8601 UTC。
+
+门户的站长后台（`/admin`）提供账号管理与**站点设置**（`/admin/settings`）：登录锁定阈值 0（关闭）或 2-20、锁定时长 1-1440 分钟、维护提示 ≤200 字，前后端校验口径一致。封禁操作使用自研 `UiDialog`，不依赖浏览器原生提示框。
 
 **与主仓库互认**：JWT 口径一致（HS256 / `uid`+`tv` / TTL 7 天）；REST 只认 `Authorization: Bearer`，cookie 仅供 `<img>`。主仓库已于 2026-11-23 按 `FRONTEND_URL` 白名单开启 CORS，并提供扫码登录、会话管理、客户端标识与版本协商——跨端接入详见主仓库 `docs/客户端接入指南.md`。
 
