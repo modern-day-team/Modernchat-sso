@@ -34,6 +34,7 @@ func newTestDB(t *testing.T) *gorm.DB {
 		db.Exec("DELETE FROM password_resets")
 		db.Exec("DELETE FROM email_codes")
 		db.Exec("DELETE FROM login_attempts")
+		db.Exec("DELETE FROM system_settings")
 		db.Exec("DELETE FROM users")
 	}
 	cleanup()

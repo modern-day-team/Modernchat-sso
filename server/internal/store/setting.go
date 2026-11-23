@@ -51,7 +51,9 @@ func NewSettingStore(db *gorm.DB) *SettingStore { return &SettingStore{db: db} }
 // Get 读单个键；不存在返回 (空串, false, nil)。
 func (s *SettingStore) Get(key string) (string, bool, error) {
 	var v model.SystemSetting
-	err := s.db.Where("key = ?", key).First(&v).Error
+	// 用结构体条件让 GORM 转义列名：key 是 MySQL 8.0 保留字，
+	// 裸写 Where("key = ?") 会生成语法错误并被 Ops() 当成"键不存在"静默回退默认值。
+	err := s.db.Where(&model.SystemSetting{Key: key}).First(&v).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return "", false, nil
