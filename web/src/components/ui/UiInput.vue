@@ -36,11 +36,11 @@ const inputEl = ref<HTMLInputElement | null>(null)
 defineExpose({ focus: () => inputEl.value?.focus() })
 
 const wrapCls = computed(() => [
-  'flex items-center gap-1.5 w-full rounded-md border bg-surface transition-colors',
+  'flex items-center gap-1.5 w-full rounded-md border bg-page transition-colors',
   props.size === 'small' ? 'h-7 px-2' : props.size === 'large' ? 'h-10 px-3' : 'h-8 px-2.5',
   props.disabled
     ? 'border-line opacity-60 cursor-not-allowed'
-    : 'border-line hover:border-brand-line-strong focus-within:border-brand',
+    : 'border-line-strong hover:border-brand-line-strong focus-within:border-brand',
 ])
 
 const inputCls = computed(() => [

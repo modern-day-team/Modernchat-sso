@@ -29,6 +29,8 @@ export default defineConfig({
       hover: 'var(--td-bg-color-container-hover)',
       active: 'var(--td-bg-color-container-active)',
       line: 'var(--mc-hairline)',
+      // 表单控件边框：白卡片上的输入框用 hairline 会隐形，需更明显的一档
+      'line-strong': 'color-mix(in srgb, var(--td-text-color-primary) 18%, transparent)',
       // 语义
       danger: 'var(--td-error-color)',
       success: 'var(--td-success-color)',

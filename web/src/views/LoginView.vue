@@ -48,45 +48,105 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
 
 <template>
   <main class="auth-card">
+    <div class="auth-card__mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="10" width="16" height="10" rx="2" />
+        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+        <circle cx="12" cy="15" r="1" fill="currentColor" stroke="none" />
+      </svg>
+    </div>
     <h1 class="auth-card__title">{{ t('auth.welcomeBack') }}</h1>
+    <p class="auth-card__subtitle">{{ t('auth.loginSubtitle') }}</p>
+
     <TForm :data="form" :rules="rules" label-width="0" @submit="onSubmit">
       <TFormItem name="username">
-        <UiInput v-model="form.username" :placeholder="t('auth.username')" clearable />
+        <UiInput v-model="form.username" :placeholder="t('auth.username')" clearable ariaLabel="username" />
       </TFormItem>
       <TFormItem name="password">
-        <UiInput v-model="form.password" type="password" :placeholder="t('auth.password')" clearable />
+        <UiInput v-model="form.password" type="password" :placeholder="t('auth.password')" clearable ariaLabel="password" />
       </TFormItem>
-      <UiButton theme="primary" type="submit" block :loading="loading">
+      <UiButton theme="primary" type="submit" block :loading="loading" class="auth-card__submit">
         {{ t('auth.login') }}
       </UiButton>
     </TForm>
+
+    <div class="auth-card__divider" />
     <p class="auth-card__footer">
-      <router-link to="/register">{{ t('auth.toRegister') }}</router-link>
+      {{ t('auth.noAccount') }} <router-link to="/register">{{ t('auth.toRegister') }}</router-link>
     </p>
+    <router-link class="auth-card__forgot" to="/forgot">{{ t('auth.forgotLink') }}</router-link>
   </main>
 </template>
 
 <style scoped>
 .auth-card {
   width: 100%;
-  max-width: 360px;
+  max-width: 400px;
   background: var(--td-bg-color-container);
   border: 1px solid var(--mc-hairline);
   border-radius: var(--mc-radius-lg);
-  padding: 32px 28px;
+  padding: 36px 32px 28px;
+  box-shadow: var(--mc-elev-1);
+}
+
+.auth-card__mark {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  border-radius: var(--mc-radius-md);
+  background: var(--mc-brand-soft);
+  color: var(--td-brand-color);
 }
 
 .auth-card__title {
   font-size: var(--mc-fs-heading);
   font-weight: 600;
   text-align: center;
-  margin: 0 0 24px;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.auth-card__subtitle {
+  text-align: center;
+  font-size: var(--mc-fs-sm);
+  color: var(--td-text-color-secondary);
+  margin: 6px 0 28px;
+}
+
+.auth-card__submit {
+  margin-top: 8px;
+}
+
+.auth-card__divider {
+  height: 1px;
+  background: var(--mc-hairline);
+  margin: 24px 0 16px;
 }
 
 .auth-card__footer {
   text-align: center;
+  font-size: var(--mc-fs-body);
+  color: var(--td-text-color-secondary);
+  margin: 0;
+}
+
+.auth-card__footer a {
+  color: var(--td-brand-color);
+  font-weight: 500;
+}
+
+.auth-card__forgot {
+  display: block;
+  text-align: center;
   font-size: var(--mc-fs-sm);
   color: var(--td-text-color-secondary);
-  margin-top: 16px;
+  margin-top: 12px;
+}
+
+.auth-card__forgot:hover {
+  color: var(--td-brand-color);
 }
 </style>

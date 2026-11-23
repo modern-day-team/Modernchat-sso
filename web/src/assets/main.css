@@ -17,6 +17,9 @@ a {
   /* 全站背景纹理的线/点颜色（普通页面 / 深色认证场景） */
   --mc-app-pattern: rgba(15, 23, 42, 0.07);
   --mc-app-pattern-scene: rgba(255, 255, 255, 0.09);
+  /* 软色档：与 uno.config.ts 的同名档位同值，供手写 CSS 使用（/alpha 对 CSS 变量无效） */
+  --mc-brand-soft: color-mix(in srgb, var(--td-brand-color) 10%, transparent);
+  --mc-warning-soft: color-mix(in srgb, var(--td-warning-color) 12%, transparent);
   /* 背景图上的柔化层：普通页面跟随亮暗主题，认证场景固定压暗 */
   --mc-app-image-scrim: rgba(255, 255, 255, 0.72);
   --mc-auth-image-scrim: rgba(4, 10, 18, 0.45);

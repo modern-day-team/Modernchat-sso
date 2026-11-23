@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { MessagePlugin } from 'tdesign-vue-next'
@@ -21,6 +21,10 @@ const page = ref(1)
 const pageSize = 20
 const kw = ref('')
 const loading = ref(false)
+
+const pageAdmins = computed(() => users.value.filter((u) => u.role === 'admin').length)
+const pageBanned = computed(() => users.value.filter(isBanned).length)
+const totalPages = computed(() => Math.ceil(total.value / pageSize) || 1)
 
 /** 拉取用户列表 */
 async function load() {
@@ -126,70 +130,113 @@ onMounted(() => {
 
 <template>
   <main class="admin-page">
-    <div class="settings-head">
-      <h1 class="admin-page__title">{{ t('admin.title') }}</h1>
+    <header class="admin-head">
+      <div>
+        <h1 class="admin-head__title">{{ t('admin.title') }}</h1>
+        <p class="admin-head__subtitle">{{ t('admin.subtitle') }}</p>
+      </div>
       <UiButton variant="outline" size="small" @click="router.push('/admin/settings')">
+        <template #icon>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21h-4v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-2.8-2.8.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2.8-2.8.1.1a1.7 1.7 0 0 0 1.9.3H10a1.7 1.7 0 0 0 1-1.5V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.8 2.8-.1.1a1.7 1.7 0 0 0-.3 1.9V10a1.7 1.7 0 0 0 1.5 1H21v4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
+          </svg>
+        </template>
         {{ t('admin.siteSettings') }}
       </UiButton>
+    </header>
+
+    <div class="admin-stats">
+      <div class="stat-card">
+        <span class="stat-card__value">{{ total }}</span>
+        <span class="stat-card__label">{{ t('admin.totalUsers') }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__value">{{ pageAdmins }}</span>
+        <span class="stat-card__label">{{ t('admin.pageAdmins') }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__value" :class="{ 'is-alert': pageBanned > 0 }">{{ pageBanned }}</span>
+        <span class="stat-card__label">{{ t('admin.pageBanned') }}</span>
+      </div>
     </div>
+
     <div class="admin-toolbar">
-      <UiInput v-model="kw" :placeholder="t('admin.searchPlaceholder')" clearable @enter="search" />
-      <UiButton variant="outline" @click="search">{{ t('admin.search') }}</UiButton>
-      <UiButton variant="outline" @click="load">{{ t('admin.refresh') }}</UiButton>
+      <UiInput v-model="kw" :placeholder="t('admin.searchPlaceholder')" clearable @enter="search">
+        <template #prefix-icon>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" /><path d="m16 16 4 4" />
+          </svg>
+        </template>
+      </UiInput>
+      <UiButton theme="primary" @click="search">{{ t('admin.search') }}</UiButton>
+      <UiButton variant="outline" :loading="loading" @click="load">{{ t('admin.refresh') }}</UiButton>
     </div>
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>{{ t('admin.colUser') }}</th>
-          <th>{{ t('admin.colEmail') }}</th>
-          <th>{{ t('admin.colRole') }}</th>
-          <th>{{ t('admin.colStatus') }}</th>
-          <th>{{ t('admin.colJoined') }}</th>
-          <th>{{ t('admin.colActions') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="u in users" :key="u.id">
-          <td class="num">{{ u.id }}</td>
-          <td>{{ u.nickname }}（@{{ u.username }}）</td>
-          <td>{{ u.email || '—' }}</td>
-          <td>
-            <UiTag :theme="u.role === 'admin' ? 'primary' : 'default'">{{ u.role }}</UiTag>
-          </td>
-          <td>
-            <UiTag :theme="isBanned(u) ? 'danger' : 'success'">
-              {{ isBanned(u) ? t('admin.banned') : t('admin.active') }}
-            </UiTag>
-          </td>
-          <td class="num">{{ new Date(u.createdAt).toLocaleDateString() }}</td>
-          <td class="actions">
-            <UiButton v-if="u.role !== 'admin'" variant="text" theme="danger" @click="onBan(u)">
-              {{ t('admin.ban') }}
-            </UiButton>
-            <UiButton v-if="isBanned(u)" variant="text" @click="onUnban(u)">
-              {{ t('admin.unban') }}
-            </UiButton>
-            <UiButton variant="text" @click="onResetPassword(u)">
-              {{ t('admin.resetPwd') }}
-            </UiButton>
-            <UiButton variant="text" @click="onToggleRole(u)">
-              {{ u.role === 'admin' ? t('admin.setUser') : t('admin.setAdmin') }}
-            </UiButton>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>{{ t('admin.colUser') }}</th>
+            <th>{{ t('admin.colEmail') }}</th>
+            <th>{{ t('admin.colRole') }}</th>
+            <th>{{ t('admin.colStatus') }}</th>
+            <th>{{ t('admin.colJoined') }}</th>
+            <th class="col-actions">{{ t('admin.colActions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="u in users" :key="u.id">
+            <td class="num">{{ u.id }}</td>
+            <td>
+              <div class="user-cell">
+                <span class="user-cell__avatar">{{ u.nickname?.slice(0, 1) || '?' }}</span>
+                <span class="user-cell__meta">
+                  <b>{{ u.nickname }}</b>
+                  <small>@{{ u.username }}</small>
+                </span>
+              </div>
+            </td>
+            <td class="email-cell">{{ u.email || '—' }}</td>
+            <td>
+              <UiTag :theme="u.role === 'admin' ? 'primary' : 'default'">{{ u.role }}</UiTag>
+            </td>
+            <td>
+              <UiTag :theme="isBanned(u) ? 'danger' : 'success'">
+                {{ isBanned(u) ? t('admin.banned') : t('admin.active') }}
+              </UiTag>
+            </td>
+            <td class="num">{{ new Date(u.createdAt).toLocaleDateString() }}</td>
+            <td>
+              <div class="row-actions">
+                <UiButton v-if="u.role !== 'admin'" variant="text" size="small" theme="danger" @click="onBan(u)">
+                  {{ t('admin.ban') }}
+                </UiButton>
+                <UiButton v-if="isBanned(u)" variant="text" size="small" @click="onUnban(u)">
+                  {{ t('admin.unban') }}
+                </UiButton>
+                <UiButton variant="text" size="small" @click="onResetPassword(u)">
+                  {{ t('admin.resetPwd') }}
+                </UiButton>
+                <UiButton variant="text" size="small" @click="onToggleRole(u)">
+                  {{ u.role === 'admin' ? t('admin.setUser') : t('admin.setAdmin') }}
+                </UiButton>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!loading && users.length === 0">
+            <td colspan="7" class="admin-empty">{{ t('admin.empty') }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     <div class="admin-pager">
-      <UiButton size="small" :disabled="page <= 1" @click="page -= 1; load()">
-        {{ t('admin.prev') }}
-      </UiButton>
-      <span class="admin-pager__info">
-        {{ t('admin.pageInfo', { page, total: Math.ceil(total / pageSize) || 1 }) }}
-      </span>
-      <UiButton size="small" :disabled="page * pageSize >= total" @click="page += 1; load()">
-        {{ t('admin.next') }}
-      </UiButton>
+      <span class="admin-pager__info">{{ t('admin.pageInfo', { page, total: totalPages }) }}</span>
+      <div class="admin-pager__buttons">
+        <UiButton size="small" :disabled="page <= 1" @click="page -= 1; load()">{{ t('admin.prev') }}</UiButton>
+        <UiButton size="small" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ t('admin.next') }}</UiButton>
+      </div>
     </div>
 
     <UiDialog
@@ -201,6 +248,12 @@ onMounted(() => {
       @confirm="onBanConfirm"
     >
       <div class="ban-form">
+        <div class="ban-form__warning">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16h.01" />
+          </svg>
+          <span>{{ t('admin.banWarning') }}</span>
+        </div>
         <label class="ban-form__label" for="ban-days">{{ t('admin.banPrompt') }}</label>
         <UiInput id="ban-days" v-model="banDaysText" />
         <label class="ban-form__label" for="ban-reason">{{ t('admin.reasonPrompt') }}</label>
@@ -214,35 +267,83 @@ onMounted(() => {
 <style scoped>
 .admin-page {
   width: 100%;
-  max-width: 960px;
+  max-width: 1000px;
   background: var(--td-bg-color-container);
   border: 1px solid var(--mc-hairline);
   border-radius: var(--mc-radius-lg);
-  padding: 24px;
+  padding: 28px 32px 24px;
+  box-shadow: var(--mc-elev-1);
 }
 
-.settings-head {
+.admin-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--mc-hairline);
 }
 
-.admin-page__title {
+.admin-head__title {
   font-size: var(--mc-fs-heading);
   font-weight: 600;
+  letter-spacing: -0.02em;
   margin: 0;
+}
+
+.admin-head__subtitle {
+  font-size: var(--mc-fs-sm);
+  color: var(--td-text-color-secondary);
+  margin: 6px 0 0;
+}
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--mc-hairline);
+  border-radius: var(--mc-radius-md);
+  background: var(--td-bg-color-secondarycontainer);
+}
+
+.stat-card__value {
+  font-size: var(--mc-fs-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--td-text-color-primary);
+  line-height: 1.1;
+}
+
+.stat-card__value.is-alert { color: var(--td-error-color); }
+
+.stat-card__label {
+  font-size: var(--mc-fs-sm);
+  color: var(--td-text-color-secondary);
 }
 
 .admin-toolbar {
   display: flex;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .admin-toolbar > :first-child {
   flex: 1;
+  max-width: 360px;
+}
+
+.admin-table-wrap {
+  border: 1px solid var(--mc-hairline);
+  border-radius: var(--mc-radius-md);
+  overflow: hidden;
 }
 
 .admin-table {
@@ -251,35 +352,93 @@ onMounted(() => {
   font-size: var(--mc-fs-sm);
 }
 
-.admin-table th,
-.admin-table td {
-  text-align: left;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--mc-hairline);
-}
-
 .admin-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--td-bg-color-secondarycontainer);
   color: var(--td-text-color-secondary);
   font-weight: 500;
+  white-space: nowrap;
 }
 
-.num {
-  font-variant-numeric: tabular-nums;
+.admin-table td {
+  padding: 12px;
+  border-top: 1px solid var(--mc-hairline);
+  vertical-align: middle;
 }
 
-.actions {
+.admin-table tbody tr:hover td {
+  background: var(--td-bg-color-container-hover);
+}
+
+.col-actions { text-align: right; }
+.num { font-variant-numeric: tabular-nums; }
+.email-cell { color: var(--td-text-color-secondary); }
+
+.user-cell {
   display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-cell__avatar {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--mc-radius-md);
+  background: var(--mc-brand-soft);
+  color: var(--td-brand-color);
+  font-size: var(--mc-fs-sm);
+  font-weight: 600;
+}
+
+.user-cell__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.user-cell__meta b {
+  font-size: var(--mc-fs-body);
+  font-weight: 500;
+  color: var(--td-text-color-primary);
+}
+
+.user-cell__meta small {
+  font-size: var(--mc-fs-sm);
+  color: var(--td-text-color-placeholder);
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 4px;
+}
+
+.admin-empty {
+  text-align: center;
+  padding: 40px 12px !important;
+  color: var(--td-text-color-placeholder);
 }
 
 .admin-pager {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 12px;
-  margin-top: 12px;
+  margin-top: 16px;
   font-size: var(--mc-fs-sm);
   color: var(--td-text-color-secondary);
+}
+
+.admin-pager__buttons {
+  display: flex;
+  gap: 8px;
 }
 
 .ban-form {
@@ -287,6 +446,18 @@ onMounted(() => {
   flex-direction: column;
   gap: 6px;
   padding: 4px 0 8px;
+}
+
+.ban-form__warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border-radius: var(--mc-radius-md);
+  background: var(--mc-warning-soft);
+  color: var(--td-warning-color);
+  font-size: var(--mc-fs-sm);
 }
 
 .ban-form__label {
@@ -298,5 +469,12 @@ onMounted(() => {
   margin: 0;
   font-size: var(--mc-fs-sm);
   color: var(--td-text-color-secondary);
+}
+
+@media (max-width: 720px) {
+  .admin-page { padding: 20px; }
+  .admin-stats { grid-template-columns: 1fr; }
+  .admin-table-wrap { overflow-x: auto; }
+  .admin-table { min-width: 760px; }
 }
 </style>
