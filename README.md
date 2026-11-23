@@ -28,12 +28,27 @@ cd ../web && npm install && npm run dev   # :5175，/api 已代理到 :8090
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
+| GET | `/healthz` | 健康检查 |
 | POST | `/api/v1/users` | 注册（首个注册者自动成为 admin） |
-| POST | `/api/v1/sessions` | 登录，返回 token 并种 `mc_auth` cookie |
+| POST | `/api/v1/sessions` | 登录，返回 `{token, user}` 并种 `mc_auth` cookie |
 | GET | `/api/v1/users/me` | 当前用户（需认证） |
 | DELETE | `/api/v1/sessions/current` | 登出（token_version + 1，全部旧 token 失效） |
+| GET | `/api/v1/settings` | 站点开关（公开） |
+| POST | `/api/v1/email-codes` | 发送邮箱验证码 |
+| POST | `/api/v1/password-resets` | 忘记密码（恒 200，不暴露邮箱存在性） |
+| POST | `/api/v1/password-resets/:token` | 重置密码（单次令牌，tv bump） |
+| PATCH | `/api/v1/users/me/password` | 自身改密（tv bump） |
+| GET | `/api/v1/version` | 构建版本（公开） |
+| PUT | `/api/v1/admin/settings` | 站点开关修改（站长） |
+| GET | `/api/v1/admin/users` | 用户分页列表（站长） |
+| POST | `/api/v1/admin/users/:id/{ban,unban,reset-password,role}` | 用户管理（站长） |
+| GET | `/api/v1/admin/update` | 更新状态与最近日志（站长） |
+| POST | `/api/v1/admin/update/checks` | 检查新版本 |
+| POST | `/api/v1/admin/update` | 发起更新任务 |
 
-错误统一 `{"error": "<中文消息>"}`；JSON 字段 camelCase，时间 ISO8601 UTC。
+完整契约（含参数与响应字段）见 [AGENTS.md](AGENTS.md) §API 契约；错误统一 `{"error": "<中文消息>"}`，JSON camelCase，时间 ISO8601 UTC。
+
+**与主仓库互认**：JWT 口径一致（HS256 / `uid`+`tv` / TTL 7 天）；REST 只认 `Authorization: Bearer`，cookie 仅供 `<img>`。主仓库已于 2026-11-23 按 `FRONTEND_URL` 白名单开启 CORS，并提供扫码登录、会话管理、客户端标识与版本协商——跨端接入详见主仓库 `docs/客户端接入指南.md`。
 
 ## 约定
 
