@@ -47,11 +47,15 @@ cd ../web && npm install && npm run dev   # :5175，/api 已代理到 :8090
 | POST | `/api/v1/admin/update/checks` | 检查新版本 |
 | POST | `/api/v1/admin/update` | 发起更新任务 |
 
-完整契约（含参数与响应字段）见 [AGENTS.md](AGENTS.md) §API 契约；错误统一 `{"error": "<中文消息>"}`，JSON camelCase，时间 ISO8601 UTC。
+上表即为公开 API 契约摘要；完整实现以 `server/internal/router/router.go` 与 `server/internal/handler/` 为准。开发协作约定见本地 `AGENTS.md`（按项目组约定不入库，因此本页不设链接）。错误统一 `{"error": "<中文消息>"}`，JSON camelCase，时间 ISO8601 UTC。
 
 门户的站长后台（`/admin`）提供账号管理与**站点设置**（`/admin/settings`）：登录锁定阈值 0（关闭）或 2-20、锁定时长 1-1440 分钟、维护提示 ≤200 字，前后端校验口径一致。封禁操作使用自研 `UiDialog`，不依赖浏览器原生提示框。
 
 **与主仓库互认**：JWT 口径一致（HS256 / `uid`+`tv` / TTL 7 天）；REST 只认 `Authorization: Bearer`，cookie 仅供 `<img>`。主仓库已于 2026-11-23 按 `FRONTEND_URL` 白名单开启 CORS，并提供扫码登录、会话管理、客户端标识与版本协商——跨端接入详见主仓库 `docs/客户端接入指南.md`。
+
+## 生产部署
+
+`server/migrations/` 提供版本化初始迁移（与 5 个 GORM 模型一致）；`scripts/install.sh` 负责解包 Release、可选执行迁移、安装 `deploy/modernchat-sso@.service` systemd 模板；`deploy/nginx.conf.example` 提供静态门户 + `/api` 反代模板。迁移自动执行需要 `MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_DATABASE` / `MYSQL_USER` / `MYSQL_PASSWORD` 环境变量；凭据不写入仓库。
 
 ## 约定
 

@@ -2,6 +2,8 @@
 
 ## [未发布]
 
+- feat(deploy)：补齐生产部署链路——`server/migrations/0001_init.*.sql` 版本化初始迁移、`scripts/install.sh`、`deploy/nginx.conf.example`；Release 包纳入迁移与安装脚本；README 修正对本地 `AGENTS.md` 的断链
+- test(web)：新增 API 客户端单元测试（token 读写、Bearer、401 清会话、skipAuth、错误归一、网络失败），并接入 CI
 - perf(web)：构建后生成 `.gz` / `.br` 预压缩产物（15→18 个文件覆盖 JS/CSS/HTML/JSON），配合 nginx `gzip_static` 在 3Mbps 下减少传输与运行时压缩开销
 - 站长后台补齐站点设置页（`/admin/settings`）：注册开关（允许注册 / 邀请码 / 邮箱验证）、维护模式与提示文案、登录失败锁定阈值与时长，共 7 项；保存即时生效
 - 新增 `GET /api/v1/admin/settings` 返回完整开关（此前公开 GET 与 PUT 仅回 2 个字段，站长无法读取其余 5 项）；PUT 响应同步改为完整视图

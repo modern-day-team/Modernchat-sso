@@ -64,10 +64,13 @@ jobs:
             CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} go build -trimpath -ldflags "${LDFLAGS}" \
               -o "${STAGING}/bin/modernchat-sso-server" ./server/cmd/server
             cp -r web/dist "${STAGING}/web-dist-tmp"
-            mkdir -p "${STAGING}/web" "${STAGING}/server" "${STAGING}/deploy"
+            mkdir -p "${STAGING}/web" "${STAGING}/server" "${STAGING}/deploy" "${STAGING}/scripts"
             mv "${STAGING}/web-dist-tmp" "${STAGING}/web/dist"
             cp server/.env.example "${STAGING}/server/.env.example"
-            cp -r deploy "${STAGING}/deploy"
+            cp -r server/migrations "${STAGING}/server/migrations"
+            cp -r deploy/. "${STAGING}/deploy/"
+            cp scripts/install.sh "${STAGING}/scripts/install.sh"
+            chmod +x "${STAGING}/scripts/install.sh"
             tar -czf "dist-release/modernchat-sso-${VER}-linux-${ARCH}.tar.gz" -C "${STAGING}" .
             sha256sum "dist-release/modernchat-sso-${VER}-linux-${ARCH}.tar.gz" \
               > "dist-release/modernchat-sso-${VER}-linux-${ARCH}.tar.gz.sha256"
