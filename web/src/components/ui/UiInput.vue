@@ -37,6 +37,8 @@ defineExpose({ focus: () => inputEl.value?.focus() })
 
 const wrapCls = computed(() => [
   'flex items-center gap-1.5 w-full rounded-md border bg-page transition-colors',
+  // 焦点环与全站一致：2px 品牌色描边 + 2px 偏移
+  'focus-within:outline-2 focus-within:outline-solid focus-within:outline-brand focus-within:outline-offset-2',
   props.size === 'small' ? 'h-7 px-2' : props.size === 'large' ? 'h-10 px-3' : 'h-8 px-2.5',
   props.disabled
     ? 'border-line opacity-60 cursor-not-allowed'
@@ -97,7 +99,7 @@ function clear() {
     <button
       v-if="clearable && modelValue && !disabled"
       type="button"
-      class="flex-shrink-0 w-4 h-4 flex items-center justify-center rounded-full border-none bg-transparent text-ink-3 hover:text-ink hover:bg-hover"
+      class="flex-shrink-0 w-6 h-6 -mr-1 flex items-center justify-center rounded-full border-none bg-transparent text-ink-3 hover:text-ink hover:bg-hover focus-visible:ring-2 focus-visible:ring-brand-ring"
       aria-label="clear"
       @click="clear"
     >

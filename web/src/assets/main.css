@@ -6,6 +6,19 @@ a {
   text-decoration: none;
 }
 
+/* 焦点环：全站统一 2px 品牌色描边 + 2px 偏移（链接等原生可聚焦元素） */
+:where(a, [tabindex]):focus-visible {
+  outline: 2px solid var(--td-brand-color);
+  outline-offset: 2px;
+}
+
+/* 栅格容器按边框盒计宽：grid.css 的 max-width 是整盒宽，含左右留白。
+   项目没有引入 preflight，不声明的话窄屏会多出一份 padding 而横向溢出。 */
+.mc-container,
+.mc-page {
+  box-sizing: border-box;
+}
+
 /* 主题相关的辅助令牌（跟随 TDesign 的 theme-mode 切换）。
  * 两套取值都以「正文文字 ≥4.5:1」为准，包含链接与最浅层级文字。 */
 :root {
@@ -20,6 +33,11 @@ a {
   /* 软色档：与 uno.config.ts 的同名档位同值，供手写 CSS 使用（/alpha 对 CSS 变量无效） */
   --mc-brand-soft: color-mix(in srgb, var(--td-brand-color) 10%, transparent);
   --mc-warning-soft: color-mix(in srgb, var(--td-warning-color) 12%, transparent);
+  --mc-brand-ring: color-mix(in srgb, var(--td-brand-color) 24%, transparent);
+  /* 模态/抽屉遮罩：亮暗共用同一压黑值，只在这里调 */
+  --mc-overlay: rgba(0, 0, 0, 0.45);
+  /* 等宽字体：仅限真实代码 / 日志 / 凭据场景，界面文案一律继承正文字体 */
+  --mc-font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
   /* 背景图上的柔化层：普通页面跟随亮暗主题，认证场景固定压暗 */
   --mc-app-image-scrim: rgba(255, 255, 255, 0.72);
   --mc-auth-image-scrim: rgba(4, 10, 18, 0.45);

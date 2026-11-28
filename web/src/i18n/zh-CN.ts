@@ -51,6 +51,7 @@ export default {
     pageAdmins: '本页站长',
     pageBanned: '本页封禁',
     empty: '没有找到符合条件的账号',
+    retry: '重试',
     searchPlaceholder: '搜索用户名/昵称',
     search: '搜索',
     refresh: '刷新',

@@ -17,6 +17,8 @@ const auth = useAuthStore()
 
 const form = reactive({ username: '', password: '' })
 const loading = ref(false)
+/* 提交失败的内联错误：比 toast 更靠近表单且不自动消失（toast 仍保留给全局观察） */
+const error = ref('')
 
 const rules: FormProps['rules'] = {
   username: [{ required: true, message: t('auth.required') }],
@@ -34,11 +36,13 @@ function afterLogin() {
 function onSubmit({ validateResult }: { validateResult: boolean | Record<string, unknown> }) {
   if (validateResult !== true || loading.value) return
   loading.value = true
+  error.value = ''
   auth
     .login(form.username, form.password)
     .then(afterLogin)
     .catch((e: unknown) => {
-      MessagePlugin.error(e instanceof ApiError ? e.message : t('auth.failed'))
+      error.value = e instanceof ApiError ? e.message : t('auth.failed')
+      MessagePlugin.error(error.value)
     })
     .finally(() => {
       loading.value = false
@@ -47,6 +51,7 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
 </script>
 
 <template>
+  <div class="mc-container mc-container--narrow auth-wrap">
   <main class="auth-card">
     <div class="auth-card__mark" aria-hidden="true">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -65,6 +70,8 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
       <TFormItem name="password">
         <UiInput v-model="form.password" type="password" :placeholder="t('auth.password')" clearable ariaLabel="password" />
       </TFormItem>
+      <!-- 提交失败的持久内联提示（错误说明靠近表单，不随 toast 消失） -->
+      <p v-if="error" class="auth-card__error" role="alert">{{ error }}</p>
       <UiButton theme="primary" type="submit" block :loading="loading" class="auth-card__submit">
         {{ t('auth.login') }}
       </UiButton>
@@ -76,26 +83,32 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
     </p>
     <router-link class="auth-card__forgot" to="/forgot">{{ t('auth.forgotLink') }}</router-link>
   </main>
+  </div>
 </template>
 
 <style scoped>
+/* 外框留白 = --mc-gutter（由 mc-container 提供），上下留白走刻度 */
+.auth-wrap {
+  padding-block: var(--mc-sp-4) var(--mc-sp-8);
+}
+
 .auth-card {
+/* 卡片宽度 = --mc-container-narrow（外层 mc-container） */
   width: 100%;
-  max-width: 400px;
   background: var(--td-bg-color-container);
   border: 1px solid var(--mc-hairline);
   border-radius: var(--mc-radius-lg);
-  padding: 36px 32px 28px;
+  padding: var(--mc-sp-8) var(--mc-sp-6) var(--mc-sp-6);
   box-shadow: var(--mc-elev-1);
 }
 
 .auth-card__mark {
-  width: 44px;
-  height: 44px;
+  width: var(--mc-ctl-lg);
+  height: var(--mc-ctl-lg);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 16px;
+  margin: 0 auto var(--mc-sp-4);
   border-radius: var(--mc-radius-md);
   background: var(--mc-brand-soft);
   color: var(--td-brand-color);
@@ -104,6 +117,7 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
 .auth-card__title {
   font-size: var(--mc-fs-heading);
   font-weight: 600;
+  line-height: var(--mc-lh-tight);
   text-align: center;
   letter-spacing: -0.02em;
   margin: 0;
@@ -113,17 +127,27 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
   text-align: center;
   font-size: var(--mc-fs-sm);
   color: var(--td-text-color-secondary);
-  margin: 6px 0 28px;
+  margin: var(--mc-sp-1) 0 var(--mc-sp-6);
 }
 
 .auth-card__submit {
-  margin-top: 8px;
+  margin-top: var(--mc-sp-2);
+}
+
+.auth-card__error {
+  margin: var(--mc-sp-2) 0 0;
+  padding: var(--mc-sp-2) var(--mc-sp-3);
+  border-radius: var(--mc-radius-sm);
+  background: var(--td-error-color-1, rgba(227, 77, 89, 0.08));
+  color: var(--td-error-color);
+  font-size: var(--mc-fs-sm);
+  line-height: var(--mc-lh-normal);
 }
 
 .auth-card__divider {
   height: 1px;
   background: var(--mc-hairline);
-  margin: 24px 0 16px;
+  margin: var(--mc-sp-6) 0 var(--mc-sp-4);
 }
 
 .auth-card__footer {
@@ -138,15 +162,17 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
   font-weight: 500;
 }
 
+.auth-card__footer a:hover,
+.auth-card__forgot:hover {
+  color: var(--td-brand-color-hover);
+}
+
 .auth-card__forgot {
   display: block;
   text-align: center;
   font-size: var(--mc-fs-sm);
   color: var(--td-text-color-secondary);
-  margin-top: 12px;
-}
-
-.auth-card__forgot:hover {
-  color: var(--td-brand-color);
+  margin-top: var(--mc-sp-3);
+  transition: color var(--mc-dur-instant) var(--mc-ease-out);
 }
 </style>

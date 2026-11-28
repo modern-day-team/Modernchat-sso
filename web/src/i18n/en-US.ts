@@ -51,6 +51,7 @@ export default {
     pageAdmins: 'Admins on page',
     pageBanned: 'Banned on page',
     empty: 'No accounts match your search',
+    retry: 'Retry',
     searchPlaceholder: 'Search username/nickname',
     search: 'Search',
     refresh: 'Refresh',

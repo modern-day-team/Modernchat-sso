@@ -21,6 +21,8 @@ const page = ref(1)
 const pageSize = 20
 const kw = ref('')
 const loading = ref(false)
+/* 列表加载失败：页面级错误态 + 重试入口，不能只靠 toast */
+const loadError = ref('')
 
 const pageAdmins = computed(() => users.value.filter((u) => u.role === 'admin').length)
 const pageBanned = computed(() => users.value.filter(isBanned).length)
@@ -29,12 +31,14 @@ const totalPages = computed(() => Math.ceil(total.value / pageSize) || 1)
 /** 拉取用户列表 */
 async function load() {
   loading.value = true
+  loadError.value = ''
   try {
     const r = await adminApi.listUsers({ page: page.value, pageSize, kw: kw.value })
     users.value = r.users
     total.value = r.total
   } catch (e: unknown) {
-    MessagePlugin.error(e instanceof ApiError ? e.message : t('auth.failed'))
+    loadError.value = e instanceof ApiError ? e.message : t('auth.failed')
+    MessagePlugin.error(loadError.value)
   } finally {
     loading.value = false
   }
@@ -129,39 +133,42 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="admin-page">
-    <header class="admin-head">
+  <main class="mc-page">
+    <header class="mc-page-head">
       <div>
-        <h1 class="admin-head__title">{{ t('admin.title') }}</h1>
-        <p class="admin-head__subtitle">{{ t('admin.subtitle') }}</p>
+        <h1 class="mc-page-head__title">{{ t('admin.title') }}</h1>
+        <p class="mc-page-head__desc">{{ t('admin.subtitle') }}</p>
       </div>
-      <UiButton variant="outline" size="small" @click="router.push('/admin/settings')">
-        <template #icon>
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21h-4v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-2.8-2.8.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2.8-2.8.1.1a1.7 1.7 0 0 0 1.9.3H10a1.7 1.7 0 0 0 1-1.5V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.8 2.8-.1.1a1.7 1.7 0 0 0-.3 1.9V10a1.7 1.7 0 0 0 1.5 1H21v4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
-          </svg>
-        </template>
-        {{ t('admin.siteSettings') }}
-      </UiButton>
+      <div class="mc-page-head__actions">
+        <UiButton variant="outline" size="small" @click="router.push('/admin/settings')">
+          <template #icon>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21h-4v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-2.8-2.8.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2.8-2.8.1.1a1.7 1.7 0 0 0 1.9.3H10a1.7 1.7 0 0 0 1-1.5V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.8 2.8-.1.1a1.7 1.7 0 0 0-.3 1.9V10a1.7 1.7 0 0 0 1.5 1H21v4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
+            </svg>
+          </template>
+          {{ t('admin.siteSettings') }}
+        </UiButton>
+      </div>
     </header>
 
-    <div class="admin-stats">
-      <div class="stat-card">
-        <span class="stat-card__value">{{ total }}</span>
-        <span class="stat-card__label">{{ t('admin.totalUsers') }}</span>
+    <div class="admin-body mc-panel">
+      <div class="admin-stats mc-grid">
+        <div class="mc-stat mc-col-4">
+          <span class="mc-stat__value">{{ total }}</span>
+          <span class="mc-stat__label">{{ t('admin.totalUsers') }}</span>
+        </div>
+        <div class="mc-stat mc-col-4">
+          <span class="mc-stat__value">{{ pageAdmins }}</span>
+          <span class="mc-stat__label">{{ t('admin.pageAdmins') }}</span>
+        </div>
+        <div class="mc-stat mc-col-4" :class="{ 'mc-stat--danger': pageBanned > 0 }">
+          <span class="mc-stat__value">{{ pageBanned }}</span>
+          <span class="mc-stat__label">{{ t('admin.pageBanned') }}</span>
+        </div>
       </div>
-      <div class="stat-card">
-        <span class="stat-card__value">{{ pageAdmins }}</span>
-        <span class="stat-card__label">{{ t('admin.pageAdmins') }}</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-card__value" :class="{ 'is-alert': pageBanned > 0 }">{{ pageBanned }}</span>
-        <span class="stat-card__label">{{ t('admin.pageBanned') }}</span>
-      </div>
-    </div>
 
-    <div class="admin-toolbar">
-      <UiInput v-model="kw" :placeholder="t('admin.searchPlaceholder')" clearable @enter="search">
+      <div class="admin-toolbar mc-row mc-row--wide">
+      <UiInput v-model="kw" :placeholder="t('admin.searchPlaceholder')" :aria-label="t('admin.searchPlaceholder')" clearable @enter="search">
         <template #prefix-icon>
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
             <circle cx="11" cy="11" r="7" /><path d="m16 16 4 4" />
@@ -224,19 +231,27 @@ onMounted(() => {
               </div>
             </td>
           </tr>
-          <tr v-if="!loading && users.length === 0">
+          <!-- 加载失败：表格区给出持久错误态 + 重试（toast 消失后仍有提示） -->
+          <tr v-if="loadError && !loading">
+            <td colspan="7" class="admin-empty admin-error" role="alert">
+              <p>{{ loadError }}</p>
+              <UiButton variant="outline" size="small" @click="load">{{ t('admin.retry') }}</UiButton>
+            </td>
+          </tr>
+          <tr v-if="!loading && !loadError && users.length === 0">
             <td colspan="7" class="admin-empty">{{ t('admin.empty') }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div class="admin-pager">
+    <div class="admin-pager mc-row mc-row--between">
       <span class="admin-pager__info">{{ t('admin.pageInfo', { page, total: totalPages }) }}</span>
-      <div class="admin-pager__buttons">
+      <div class="admin-pager__buttons mc-row">
         <UiButton size="small" :disabled="page <= 1" @click="page -= 1; load()">{{ t('admin.prev') }}</UiButton>
         <UiButton size="small" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ t('admin.next') }}</UiButton>
       </div>
+    </div>
     </div>
 
     <UiDialog
@@ -265,76 +280,15 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.admin-page {
-  width: 100%;
-  max-width: 1000px;
-  background: var(--td-bg-color-container);
-  border: 1px solid var(--mc-hairline);
-  border-radius: var(--mc-radius-lg);
-  padding: 28px 32px 24px;
-  box-shadow: var(--mc-elev-1);
-}
-
-.admin-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--mc-hairline);
-}
-
-.admin-head__title {
-  font-size: var(--mc-fs-heading);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  margin: 0;
-}
-
-.admin-head__subtitle {
-  font-size: var(--mc-fs-sm);
-  color: var(--td-text-color-secondary);
-  margin: 6px 0 0;
-}
-
-.admin-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin: 20px 0;
-}
-
-.stat-card {
+/* 页面骨架：.mc-page（容器 + 留白 + 区块节奏）+ .mc-page-head + .mc-panel，
+   宽度随容器档位走（≤1024 自然收窄），不再写死 1000px */
+.admin-body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 14px 16px;
-  border: 1px solid var(--mc-hairline);
-  border-radius: var(--mc-radius-md);
-  background: var(--td-bg-color-secondarycontainer);
+  gap: var(--mc-sp-4);
 }
 
-.stat-card__value {
-  font-size: var(--mc-fs-display);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--td-text-color-primary);
-  line-height: 1.1;
-}
-
-.stat-card__value.is-alert { color: var(--td-error-color); }
-
-.stat-card__label {
-  font-size: var(--mc-fs-sm);
-  color: var(--td-text-color-secondary);
-}
-
-.admin-toolbar {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
+/* 搜索框占主宽，但不无限拉长 */
 .admin-toolbar > :first-child {
   flex: 1;
   max-width: 360px;
@@ -354,7 +308,7 @@ onMounted(() => {
 
 .admin-table th {
   text-align: left;
-  padding: 10px 12px;
+  padding: var(--mc-sp-2) var(--mc-sp-3);
   background: var(--td-bg-color-secondarycontainer);
   color: var(--td-text-color-secondary);
   font-weight: 500;
@@ -362,7 +316,7 @@ onMounted(() => {
 }
 
 .admin-table td {
-  padding: 12px;
+  padding: var(--mc-sp-3);
   border-top: 1px solid var(--mc-hairline);
   vertical-align: middle;
 }
@@ -378,7 +332,7 @@ onMounted(() => {
 .user-cell {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--mc-sp-2);
 }
 
 .user-cell__avatar {
@@ -422,38 +376,35 @@ onMounted(() => {
 
 .admin-empty {
   text-align: center;
-  padding: 40px 12px !important;
+  padding: var(--mc-sp-10) var(--mc-sp-3) !important;
   color: var(--td-text-color-placeholder);
 }
 
-.admin-pager {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 16px;
-  font-size: var(--mc-fs-sm);
-  color: var(--td-text-color-secondary);
+/* 加载失败的错误态：红色文案 + 重试按钮 */
+.admin-error p {
+  margin: 0 0 var(--mc-sp-2);
+  color: var(--td-error-color);
 }
 
-.admin-pager__buttons {
-  display: flex;
-  gap: 8px;
+.admin-pager {
+  margin-top: var(--mc-sp-4);
+  font-size: var(--mc-fs-sm);
+  color: var(--td-text-color-secondary);
 }
 
 .ban-form {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 4px 0 8px;
+  gap: var(--mc-sp-1);
+  padding: var(--mc-sp-1) 0 var(--mc-sp-2);
 }
 
 .ban-form__warning {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  margin-bottom: 6px;
+  gap: var(--mc-sp-2);
+  padding: var(--mc-sp-2) var(--mc-sp-3);
+  margin-bottom: var(--mc-sp-1);
   border-radius: var(--mc-radius-md);
   background: var(--mc-warning-soft);
   color: var(--td-warning-color);
@@ -471,9 +422,8 @@ onMounted(() => {
   color: var(--td-text-color-secondary);
 }
 
-@media (max-width: 720px) {
-  .admin-page { padding: 20px; }
-  .admin-stats { grid-template-columns: 1fr; }
+/* 标准断点（原 720 归并到 768）：窄屏表格横向滚动 */
+@media (max-width: 767px) {
   .admin-table-wrap { overflow-x: auto; }
   .admin-table { min-width: 760px; }
 }

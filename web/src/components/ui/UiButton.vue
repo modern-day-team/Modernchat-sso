@@ -76,7 +76,8 @@ const themeCls = computed(() => {
 const cls = computed(() => [
   'ui-btn inline-flex items-center justify-center select-none whitespace-nowrap',
   'font-[inherit] outline-none',
-  'focus-visible:ring-2 focus-visible:ring-brand-ring',
+  // 焦点环与全站一致：2px 品牌色描边 + 2px 偏移
+  'focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-brand focus-visible:outline-offset-2',
   sizeCls.value,
   themeCls.value,
   props.block ? 'w-full' : '',
@@ -136,8 +137,9 @@ function onClick(e: MouseEvent) {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* 旋转动画直接停用：保留静态圆环表示加载中，避免持续运动 */
   .ui-btn__spin {
-    animation-duration: 2s;
+    animation: none;
   }
 }
 </style>

@@ -70,6 +70,7 @@ function onPwdSubmit({ validateResult }: { validateResult: boolean | Record<stri
 </script>
 
 <template>
+  <div class="mc-container mc-container--narrow auth-wrap">
   <main class="auth-card">
     <h1 class="auth-card__title">{{ t('home.title') }}</h1>
     <div class="home-user">
@@ -100,13 +101,13 @@ function onPwdSubmit({ validateResult }: { validateResult: boolean | Record<stri
       @submit="onPwdSubmit"
     >
       <TFormItem name="oldPassword">
-        <UiInput v-model="pwdForm.oldPassword" type="password" :placeholder="t('home.oldPassword')" clearable />
+        <UiInput v-model="pwdForm.oldPassword" type="password" :placeholder="t('home.oldPassword')" :aria-label="t('home.oldPassword')" clearable />
       </TFormItem>
       <TFormItem name="newPassword">
-        <UiInput v-model="pwdForm.newPassword" type="password" :placeholder="t('home.newPassword')" clearable />
+        <UiInput v-model="pwdForm.newPassword" type="password" :placeholder="t('home.newPassword')" :aria-label="t('home.newPassword')" clearable />
       </TFormItem>
       <TFormItem name="confirm">
-        <UiInput v-model="pwdForm.confirm" type="password" :placeholder="t('home.confirmNew')" clearable />
+        <UiInput v-model="pwdForm.confirm" type="password" :placeholder="t('home.confirmNew')" :aria-label="t('home.confirmNew')" clearable />
       </TFormItem>
       <UiButton theme="primary" type="submit" block :loading="pwdLoading">
         {{ t('home.pwdSubmit') }}
@@ -117,30 +118,39 @@ function onPwdSubmit({ validateResult }: { validateResult: boolean | Record<stri
       {{ t('home.logout') }}
     </UiButton>
   </main>
+  </div>
 </template>
 
 <style scoped>
+/* 外框留白 = --mc-gutter（由 mc-container 提供），上下留白走刻度 */
+.auth-wrap {
+  padding-block: var(--mc-sp-4) var(--mc-sp-8);
+}
+
 .auth-card {
+/* 卡片宽度 = --mc-container-narrow（外层 mc-container） */
   width: 100%;
-  max-width: 400px;
   background: var(--td-bg-color-container);
   border: 1px solid var(--mc-hairline);
   border-radius: var(--mc-radius-lg);
-  padding: 32px 28px;
+  padding: var(--mc-sp-8) var(--mc-sp-6) var(--mc-sp-6);
+  box-shadow: var(--mc-elev-1);
 }
 
 .auth-card__title {
   font-size: var(--mc-fs-heading);
   font-weight: 600;
+  line-height: var(--mc-lh-tight);
+  letter-spacing: -0.02em;
   text-align: center;
-  margin: 0 0 24px;
+  margin: 0 0 var(--mc-sp-6);
 }
 
 .home-user {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: var(--mc-sp-3);
+  padding: var(--mc-sp-3);
   border-radius: var(--mc-radius-md);
   background: var(--td-bg-color-secondarycontainer);
 }
@@ -152,9 +162,10 @@ function onPwdSubmit({ validateResult }: { validateResult: boolean | Record<stri
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--td-text-color-anti);
   font-weight: 600;
   flex-shrink: 0;
+  font-size: var(--mc-fs-title);
 }
 
 .home-user__meta {
@@ -165,31 +176,35 @@ function onPwdSubmit({ validateResult }: { validateResult: boolean | Record<stri
 .home-user__name {
   font-size: var(--mc-fs-emphasis);
   font-weight: 600;
+  line-height: var(--mc-lh-snug);
+  overflow-wrap: anywhere;
 }
 
 .home-user__sub {
   font-size: var(--mc-fs-sm);
+  line-height: var(--mc-lh-snug);
   color: var(--td-text-color-secondary);
+  overflow-wrap: anywhere;
 }
 
 .home-hint {
   font-size: var(--mc-fs-sm);
   color: var(--td-text-color-secondary);
-  line-height: 1.6;
-  margin: 16px 0 20px;
+  line-height: var(--mc-lh-normal);
+  margin: var(--mc-sp-4) 0 var(--mc-sp-5);
 }
 
 .home-hint--gap {
-  margin-top: 20px;
+  margin-top: var(--mc-sp-5);
 }
 
 .home-gap {
-  margin-top: 12px;
+  margin-top: var(--mc-sp-2);
 }
 
 .pwd-form {
-  margin-top: 16px;
-  padding-top: 16px;
+  margin-top: var(--mc-sp-4);
+  padding-top: var(--mc-sp-4);
   border-top: 1px solid var(--mc-hairline);
 }
 </style>

@@ -164,7 +164,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--mc-overlay);
 }
 
 .ui-dialog {

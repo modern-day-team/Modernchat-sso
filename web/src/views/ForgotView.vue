@@ -41,13 +41,14 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
 </script>
 
 <template>
+  <div class="mc-container mc-container--narrow auth-wrap">
   <main class="auth-card">
     <h1 class="auth-card__title">{{ t('forgot.title') }}</h1>
     <template v-if="!sent">
       <p class="auth-card__hint">{{ t('forgot.hint') }}</p>
       <TForm :data="form" :rules="rules" label-width="0" @submit="onSubmit">
         <TFormItem name="email">
-          <UiInput v-model="form.email" type="email" :placeholder="t('auth.email')" clearable />
+          <UiInput v-model="form.email" type="email" :placeholder="t('auth.email')" :aria-label="t('auth.email')" clearable />
         </TFormItem>
         <UiButton theme="primary" type="submit" block :loading="loading">
           {{ t('forgot.submit') }}
@@ -61,36 +62,44 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
       <router-link to="/login">{{ t('auth.toLogin') }}</router-link>
     </p>
   </main>
+  </div>
 </template>
 
 <style scoped>
+/* 外框留白 = --mc-gutter（由 mc-container 提供），上下留白走刻度 */
+.auth-wrap {
+  padding-block: var(--mc-sp-4) var(--mc-sp-8);
+}
+
 .auth-card {
+/* 卡片宽度 = --mc-container-narrow（外层 mc-container） */
   width: 100%;
-  max-width: 360px;
   background: var(--td-bg-color-container);
   border: 1px solid var(--mc-hairline);
   border-radius: var(--mc-radius-lg);
-  padding: 32px 28px;
+  padding: var(--mc-sp-8) var(--mc-sp-6) var(--mc-sp-6);
+  box-shadow: var(--mc-elev-1);
 }
 
 .auth-card__title {
   font-size: var(--mc-fs-heading);
   font-weight: 600;
+  line-height: var(--mc-lh-tight);
   text-align: center;
-  margin: 0 0 16px;
+  margin: 0 0 var(--mc-sp-4);
 }
 
 .auth-card__hint {
   font-size: var(--mc-fs-sm);
   color: var(--td-text-color-secondary);
-  line-height: 1.6;
-  margin: 0 0 16px;
+  line-height: var(--mc-lh-normal);
+  margin: 0 0 var(--mc-sp-4);
 }
 
 .auth-card__footer {
   text-align: center;
   font-size: var(--mc-fs-sm);
   color: var(--td-text-color-secondary);
-  margin-top: 16px;
+  margin-top: var(--mc-sp-4);
 }
 </style>

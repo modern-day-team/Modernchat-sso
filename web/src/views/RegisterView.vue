@@ -106,19 +106,20 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
 </script>
 
 <template>
+  <div class="mc-container mc-container--narrow auth-wrap">
   <main class="auth-card">
     <h1 class="auth-card__title">{{ t('auth.register') }}</h1>
     <div v-if="registerClosed" class="auth-card__notice">{{ t('auth.registerClosed') }}</div>
     <TForm v-else :data="form" :rules="rules" label-width="0" @submit="onSubmit">
       <TFormItem name="username">
-        <UiInput v-model="form.username" :placeholder="t('auth.username')" clearable />
+        <UiInput v-model="form.username" :placeholder="t('auth.username')" :aria-label="t('auth.username')" clearable />
       </TFormItem>
       <TFormItem name="nickname">
-        <UiInput v-model="form.nickname" :placeholder="t('auth.nickname')" clearable />
+        <UiInput v-model="form.nickname" :placeholder="t('auth.nickname')" :aria-label="t('auth.nickname')" clearable />
       </TFormItem>
       <TFormItem name="email">
         <div class="code-row">
-          <UiInput v-model="form.email" type="email" :placeholder="t('auth.email')" clearable />
+          <UiInput v-model="form.email" type="email" :placeholder="t('auth.email')" :aria-label="t('auth.email')" clearable />
           <UiButton
             variant="outline"
             size="medium"
@@ -131,13 +132,13 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
         </div>
       </TFormItem>
       <TFormItem v-if="needEmail" name="emailCode">
-        <UiInput v-model="form.emailCode" :placeholder="t('auth.emailCode')" :maxlength="6" />
+        <UiInput v-model="form.emailCode" :placeholder="t('auth.emailCode')" :aria-label="t('auth.emailCode')" :maxlength="6" />
       </TFormItem>
       <TFormItem name="password">
-        <UiInput v-model="form.password" type="password" :placeholder="t('auth.password')" clearable />
+        <UiInput v-model="form.password" type="password" :placeholder="t('auth.password')" :aria-label="t('auth.password')" clearable />
       </TFormItem>
       <TFormItem name="confirm">
-        <UiInput v-model="form.confirm" type="password" :placeholder="t('auth.confirmPassword')" clearable />
+        <UiInput v-model="form.confirm" type="password" :placeholder="t('auth.confirmPassword')" :aria-label="t('auth.confirmPassword')" clearable />
       </TFormItem>
       <UiButton theme="primary" type="submit" block :loading="loading">
         {{ t('auth.register') }}
@@ -147,36 +148,44 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
       <router-link to="/login">{{ t('auth.toLogin') }}</router-link>
     </p>
   </main>
+  </div>
 </template>
 
 <style scoped>
+/* 外框留白 = --mc-gutter（由 mc-container 提供），上下留白走刻度 */
+.auth-wrap {
+  padding-block: var(--mc-sp-4) var(--mc-sp-8);
+}
+
 .auth-card {
+/* 卡片宽度 = --mc-container-narrow（外层 mc-container） */
   width: 100%;
-  max-width: 360px;
   background: var(--td-bg-color-container);
   border: 1px solid var(--mc-hairline);
   border-radius: var(--mc-radius-lg);
-  padding: 32px 28px;
+  padding: var(--mc-sp-8) var(--mc-sp-6) var(--mc-sp-6);
+  box-shadow: var(--mc-elev-1);
 }
 
 .auth-card__title {
   font-size: var(--mc-fs-heading);
   font-weight: 600;
+  line-height: var(--mc-lh-tight);
   text-align: center;
-  margin: 0 0 24px;
+  margin: 0 0 var(--mc-sp-6);
 }
 
 .auth-card__notice {
   text-align: center;
   font-size: var(--mc-fs-body);
   color: var(--td-warning-color);
-  margin-bottom: 16px;
+  margin-bottom: var(--mc-sp-4);
 }
 
 /* 验证码行：输入框 + 发送按钮同行 */
 .code-row {
   display: flex;
-  gap: 8px;
+  gap: var(--mc-sp-2);
   width: 100%;
 }
 
@@ -188,7 +197,8 @@ function onSubmit({ validateResult }: { validateResult: boolean | Record<string,
 .auth-card__footer {
   text-align: center;
   font-size: var(--mc-fs-sm);
+  line-height: var(--mc-lh-normal);
   color: var(--td-text-color-secondary);
-  margin-top: 16px;
+  margin-top: var(--mc-sp-4);
 }
 </style>

@@ -4,7 +4,7 @@
 
 <template>
   <div class="app-shell">
-    <header class="app-shell__header">
+    <header class="app-shell__header mc-container mc-row mc-row--between">
       <router-link to="/" class="app-shell__brand" aria-label="Modernchat SSO">
         <span class="app-shell__mark" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -21,9 +21,9 @@
       <router-view />
     </main>
 
-    <footer class="app-shell__footer">
+    <footer class="app-shell__footer mc-container">
       <span>Modernchat SSO</span>
-      <span class="app-shell__dot">·</span>
+      <span class="app-shell__dot">|</span>
       <span>项目组统一登录入口</span>
     </footer>
   </div>
@@ -36,49 +36,54 @@
   display: flex;
   flex-direction: column;
   background-color: var(--td-bg-color-page);
+  /* 背景网格：方格边长 = 2 × 栅格槽宽（32 / 48px），与页面留白同一节奏 */
   background-image:
     radial-gradient(60% 45% at 50% 0%, var(--mc-brand-soft), transparent 70%),
     linear-gradient(var(--mc-app-pattern) 1px, transparent 1px),
     linear-gradient(90deg, var(--mc-app-pattern) 1px, transparent 1px);
-  background-size: 100% 100%, 40px 40px, 40px 40px;
+  background-size: 100% 100%, calc(var(--mc-gutter) * 2) calc(var(--mc-gutter) * 2), calc(var(--mc-gutter) * 2) calc(var(--mc-gutter) * 2);
   background-position: center top, -1px -1px, -1px -1px;
 }
 
+/* 头 / 主体 / 页脚都是标准档容器（--mc-container），与栅格叠加层同一套列 */
 .app-shell__header {
   position: relative;
   z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 28px;
-  max-width: 1160px;
-  width: 100%;
-  margin: 0 auto;
+  padding-block: var(--mc-gutter);
 }
 
 .app-shell__brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--mc-sp-2);
+  padding: var(--mc-sp-1);
+  margin: calc(var(--mc-sp-1) * -1);
+  border-radius: var(--mc-radius-md);
   color: var(--td-text-color-primary);
   text-decoration: none;
+  transition: background-color var(--mc-dur-instant) var(--mc-ease-out);
+}
+
+.app-shell__brand:hover {
+  background: var(--td-bg-color-container-hover);
 }
 
 .app-shell__mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: var(--mc-ctl-lg);
+  height: var(--mc-ctl-lg);
   border-radius: var(--mc-radius-md);
   background: var(--td-brand-color);
-  color: #fff;
+  color: var(--td-text-color-anti);
   box-shadow: var(--mc-elev-1);
 }
 
 .app-shell__name {
   font-size: var(--mc-fs-emphasis);
   font-weight: 500;
+  line-height: var(--mc-lh-snug);
   letter-spacing: -0.01em;
 }
 
@@ -89,9 +94,11 @@
 
 .app-shell__tagline {
   font-size: var(--mc-fs-sm);
+  line-height: var(--mc-lh-snug);
   color: var(--td-text-color-secondary);
 }
 
+/* 左右留白交给各页面的容器/页面骨架（都是 --mc-gutter），这里只负责垂直居中 */
 .app-shell__main {
   position: relative;
   z-index: 1;
@@ -99,7 +106,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px 24px 40px;
+  min-width: 0;
 }
 
 .app-shell__footer {
@@ -108,9 +115,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 20px;
+  gap: var(--mc-sp-2);
+  padding-block: var(--mc-sp-4) var(--mc-sp-5);
   font-size: var(--mc-fs-sm);
+  line-height: var(--mc-lh-normal);
   color: var(--td-text-color-placeholder);
 }
 
@@ -118,9 +126,9 @@
   opacity: 0.5;
 }
 
-@media (max-width: 640px) {
-  .app-shell__header { padding: 16px 20px; }
-  .app-shell__tagline { display: none; }
-  .app-shell__main { align-items: flex-start; padding: 8px 16px 32px; }
+@media (max-width: 479px) {
+  .app-shell__tagline {
+    display: none;
+  }
 }
 </style>
