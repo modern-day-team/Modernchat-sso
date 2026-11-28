@@ -79,22 +79,24 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="settings-page">
-    <header class="settings-head">
+  <main class="mc-page mc-page--compact">
+    <header class="mc-page-head">
       <div>
-        <h1 class="settings-head__title">{{ t('settings.title') }}</h1>
-        <p class="settings-head__subtitle">{{ t('settings.subtitle') }}</p>
+        <h1 class="mc-page-head__title">{{ t('settings.title') }}</h1>
+        <p class="mc-page-head__desc">{{ t('settings.subtitle') }}</p>
       </div>
-      <UiButton variant="outline" size="small" @click="router.push('/admin')">
-        {{ t('settings.back') }}
-      </UiButton>
+      <div class="mc-page-head__actions">
+        <UiButton variant="outline" size="small" @click="router.push('/admin')">
+          {{ t('settings.back') }}
+        </UiButton>
+      </div>
     </header>
 
     <div v-if="loading" class="settings-loading">
       <div v-for="n in 3" :key="n" class="settings-skeleton" />
     </div>
 
-    <template v-else>
+    <div v-else class="settings-body mc-panel">
       <section class="settings-group">
         <div class="group-head">
           <span class="group-head__icon group-head__icon--blue" aria-hidden="true">
@@ -222,53 +224,31 @@ onMounted(() => {
           {{ t('settings.save') }}
         </UiButton>
       </div>
-    </template>
+    </div>
   </main>
 </template>
 
 <style scoped>
-.settings-page {
-  width: 100%;
-  max-width: 720px;
-  background: var(--td-bg-color-container);
-  border: 1px solid var(--mc-hairline);
-  border-radius: var(--mc-radius-lg);
-  padding: 28px 32px 24px;
-  box-shadow: var(--mc-elev-1);
-}
-
-.settings-head {
+/* 页面骨架：.mc-page--compact（840 档）+ .mc-page-head + .mc-panel，不再写死 720px */
+.settings-body {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--mc-hairline);
-}
-
-.settings-head__title {
-  font-size: var(--mc-fs-heading);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  margin: 0;
-}
-
-.settings-head__subtitle {
-  font-size: var(--mc-fs-sm);
-  color: var(--td-text-color-secondary);
-  margin: 6px 0 0;
+  flex-direction: column;
 }
 
 .settings-group {
-  padding: 22px 0 8px;
+  padding: var(--mc-sp-5) 0 var(--mc-sp-2);
   border-bottom: 1px solid var(--mc-hairline);
+}
+
+.settings-group:last-child {
+  border-bottom: none;
 }
 
 .group-head {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--mc-sp-3);
+  margin-bottom: var(--mc-sp-4);
 }
 
 .group-head__icon {
@@ -294,15 +274,15 @@ onMounted(() => {
 .group-head__desc {
   font-size: var(--mc-fs-sm);
   color: var(--td-text-color-secondary);
-  margin: 2px 0 0;
+  margin: var(--mc-sp-1) 0 0;
 }
 
 .setting-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 12px 0;
+  gap: var(--mc-sp-5);
+  padding: var(--mc-sp-3) 0;
 }
 
 .setting-row + .setting-row {
@@ -314,23 +294,23 @@ onMounted(() => {
 .setting-row__info h3 {
   font-size: var(--mc-fs-body);
   font-weight: 500;
-  margin: 0 0 4px;
+  margin: 0 0 var(--mc-sp-1);
 }
 
 .setting-row__info p,
 .setting-field__hint {
   font-size: var(--mc-fs-sm);
   color: var(--td-text-color-secondary);
-  line-height: 1.5;
+  line-height: var(--mc-lh-normal);
   margin: 0;
 }
 
 .settings-warning {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
+  gap: var(--mc-sp-2);
+  padding: var(--mc-sp-2) var(--mc-sp-3);
+  margin-bottom: var(--mc-sp-3);
   border-radius: var(--mc-radius-md);
   background: var(--mc-warning-soft);
   color: var(--td-warning-color);
@@ -338,23 +318,23 @@ onMounted(() => {
 }
 
 .setting-field {
-  padding: 12px 0;
+  padding: var(--mc-sp-3) 0;
 }
 
 .setting-field__label {
   display: block;
   font-size: var(--mc-fs-body);
   font-weight: 500;
-  margin-bottom: 8px;
+  margin-bottom: var(--mc-sp-2);
 }
 
-.setting-field__hint { margin-top: 6px; }
+.setting-field__hint { margin-top: var(--mc-sp-1); }
 
 .setting-field--inline {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: var(--mc-sp-5);
 }
 
 .setting-field__text { min-width: 0; }
@@ -364,14 +344,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding-top: 20px;
+  gap: var(--mc-sp-4);
+  padding-top: var(--mc-sp-5);
 }
 
 .settings-actions__status {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--mc-sp-2);
   font-size: var(--mc-fs-sm);
   color: var(--td-text-color-placeholder);
 }
@@ -386,7 +366,7 @@ onMounted(() => {
 .settings-actions__status.is-dirty { color: var(--td-warning-color); }
 .settings-actions__status.is-dirty .settings-actions__dot { background: var(--td-warning-color); }
 
-.settings-loading { display: grid; gap: 16px; padding: 28px 0; }
+.settings-loading { display: grid; gap: var(--mc-sp-4); padding: var(--mc-sp-8) 0; }
 .settings-skeleton {
   height: 88px;
   border-radius: var(--mc-radius-md);
@@ -404,8 +384,8 @@ onMounted(() => {
   .settings-skeleton { animation: none; }
 }
 
-@media (max-width: 640px) {
-  .settings-page { padding: 20px; }
+/* 标准断点（原 640 归并到 768） */
+@media (max-width: 767px) {
   .setting-field--inline { align-items: flex-start; }
   .setting-field__number { width: 96px; }
 }

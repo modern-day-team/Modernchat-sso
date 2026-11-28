@@ -9,6 +9,8 @@ import i18n from './i18n'
 // 组件一律在 SFC 内按需 import（不 app.use(TDesign)），否则整库无法 tree-shake。
 import 'tdesign-vue-next/es/style/index.css'
 import './assets/main.css'
+// 栅格系统（与主仓库 web/src/assets/grid.css 逐字节相同）
+import './assets/grid.css'
 // UnoCSS 工具类最后引入
 import 'virtual:uno.css'
 
