@@ -55,7 +55,44 @@ cd ../web && npm install && npm run dev   # :5175，/api 已代理到 :8090
 
 ## 生产部署
 
+两条路线任选其一：
+
+### A. Docker Compose（推荐）
+
+```bash
+# 1. 先构建门户静态产物（nginx 容器挂载用）
+cd web && npm ci && npm run build && cd ..
+
+# 2. 注入必需凭据（缺一个 compose 都会报错拒绝启动）
+export JWT_SECRET=$(openssl rand -hex 32)
+export MYSQL_ROOT_PASSWORD=$(openssl rand -base64 24)
+export COOKIE_SECURE=true
+export PUBLIC_URL=https://sso.example.com   # 门户公开地址，重置密码邮件链接前缀
+
+# 3. 起 MySQL + 后端（:8090）
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+说明：
+
+- 镜像只含后端（本服务不做静态托管，门户由 compose 内可选的 nginx 服务或宿主机 nginx 提供，模板见 `deploy/nginx.conf.example`）
+- 建表走启动期 AutoMigrate；需要版本化迁移时改用 `scripts/install.sh` + `server/migrations/`（`MYSQL_*` 环境变量）
+- 版本注入：`VERSION / COMMIT / BUILD_TIME` 作为 build args 传给 Dockerfile，核对 `GET /api/v1/version`
+
+### B. systemd（原有路线）
+
 `server/migrations/` 提供版本化初始迁移（与 5 个 GORM 模型一致）；`scripts/install.sh` 负责解包 Release、可选执行迁移、安装 `deploy/modernchat-sso@.service` systemd 模板；`deploy/nginx.conf.example` 提供静态门户 + `/api` 反代模板。迁移自动执行需要 `MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_DATABASE` / `MYSQL_USER` / `MYSQL_PASSWORD` 环境变量；凭据不写入仓库。
+
+### 跨子域部署（主仓库与 SSO 分属不同子域时）
+
+SSO 种的 `mc_auth` cookie 默认仅当前域可见（SameSite=Lax）。当主仓库部署在 `app.example.com`、SSO 部署在 `sso.example.com` 而主仓库前端要靠 `<img>` 带 cookie 认证时，SSO 侧设置：
+
+```bash
+COOKIE_DOMAIN=.example.com   # 父域共享
+COOKIE_SECURE=true           # 必须同开：SameSite=None 仅接受 Secure cookie，非法组合服务拒绝启动
+```
+
+服务端自动改用 `SameSite=None + Domain=<父域>` 下发与清除 cookie；不用跨子域时保持默认即可。
 
 ## 约定
 

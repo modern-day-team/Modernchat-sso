@@ -15,6 +15,7 @@ type Config struct {
 	DBDSN        string // MySQL 连接串
 	JWTSecret    string // JWT 签名密钥
 	CookieSecure bool   // mc_auth cookie 是否带 Secure（生产必须 true）
+	CookieDomain string // COOKIE_DOMAIN 跨子域共享时填写父域（如 .example.com）；留空=当前域，SameSite=Lax
 
 	PublicURL string // PUBLIC_URL 门户公开地址（重置密码链接前缀），生产必须改
 
@@ -62,6 +63,7 @@ func Load() (Config, error) {
 		DBDSN:        getEnv("DB_DSN", "root:modernchat_sso_dev@tcp(127.0.0.1:3307)/modernchat_sso?charset=utf8mb4&parseTime=true&loc=Local"),
 		JWTSecret:    os.Getenv("JWT_SECRET"),
 		CookieSecure: getEnv("COOKIE_SECURE", "false") == "true",
+		CookieDomain: os.Getenv("COOKIE_DOMAIN"),
 
 		PublicURL: getEnv("PUBLIC_URL", "http://localhost:5175"),
 
@@ -75,6 +77,11 @@ func Load() (Config, error) {
 	// ≥32 字节与主仓库生产要求一致（运维手册 §JWT_SECRET）
 	if len(cfg.JWTSecret) < 32 {
 		return cfg, fmt.Errorf("JWT_SECRET 未设置或不足 32 字节（生成：openssl rand -hex 32）")
+	}
+	// 跨子域共享 cookie 必须 SameSite=None，而浏览器只接受带 Secure 的 None，
+	// 所以 COOKIE_DOMAIN 与 COOKIE_SECURE 绑定校验，避免配出会被浏览器静默丢弃的组合。
+	if cfg.CookieDomain != "" && !cfg.CookieSecure {
+		return cfg, fmt.Errorf("COOKIE_DOMAIN 跨子域共享时必须同时设置 COOKIE_SECURE=true（SameSite=None 仅接受 Secure cookie）")
 	}
 	return cfg, nil
 }

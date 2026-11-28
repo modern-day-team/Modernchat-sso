@@ -31,11 +31,12 @@ type AccountService interface {
 type AuthHandler struct {
 	accounts     AccountService
 	cookieSecure bool
+	cookieDomain string // 跨子域共享时为父域（如 .example.com）；留空=当前域
 }
 
-// NewAuthHandler 构造。
-func NewAuthHandler(accounts AccountService, cookieSecure bool) *AuthHandler {
-	return &AuthHandler{accounts: accounts, cookieSecure: cookieSecure}
+// NewAuthHandler 构造。cookieDomain 非空时走跨子域模式（SameSite=None + Domain）。
+func NewAuthHandler(accounts AccountService, cookieSecure bool, cookieDomain string) *AuthHandler {
+	return &AuthHandler{accounts: accounts, cookieSecure: cookieSecure, cookieDomain: cookieDomain}
 }
 
 type registerReq struct {
@@ -78,7 +79,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		mapErr(c, err)
 		return
 	}
-	setAuthCookie(c, h.cookieSecure, tok)
+	setAuthCookie(c, h.cookieSecure, h.cookieDomain, tok)
 	c.JSON(http.StatusOK, gin.H{"token": tok, "user": u})
 }
 
@@ -93,7 +94,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		mapErr(c, err)
 		return
 	}
-	clearAuthCookie(c, h.cookieSecure)
+	clearAuthCookie(c, h.cookieSecure, h.cookieDomain)
 	c.Status(http.StatusNoContent)
 }
 
@@ -229,13 +230,24 @@ func mapErr(c *gin.Context, err error) {
 	}
 }
 
-func setAuthCookie(c *gin.Context, secure bool, tok string) {
+func setAuthCookie(c *gin.Context, secure bool, domain, tok string) {
+	if domain != "" {
+		// 跨子域共享：Domain 指向父域 + SameSite=None（浏览器仅接受带 Secure 的 None，
+		// config.Load 已强制 COOKIE_SECURE=true，这里 domain 非空即 secure）。
+		c.SetSameSite(http.SameSiteNoneMode)
+		c.SetCookie(token.AuthCookieName, tok, int(token.TTL.Seconds()), "/", domain, true, true)
+		return
+	}
 	c.SetSameSite(http.SameSiteLaxMode)
-	// TODO：SSO 跨子域部署时需加 Domain 并改 SameSite=None + COOKIE_SECURE=true
 	c.SetCookie(token.AuthCookieName, tok, int(token.TTL.Seconds()), "/", "", secure, true)
 }
 
-func clearAuthCookie(c *gin.Context, secure bool) {
+func clearAuthCookie(c *gin.Context, secure bool, domain string) {
+	if domain != "" {
+		c.SetSameSite(http.SameSiteNoneMode)
+		c.SetCookie(token.AuthCookieName, "", -1, "/", domain, true, true)
+		return
+	}
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie(token.AuthCookieName, "", -1, "/", "", secure, true)
 }

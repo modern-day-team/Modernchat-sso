@@ -41,7 +41,7 @@ func Setup(cfg config.Config, db *gorm.DB, upd *service.Updater) *gin.Engine {
 	// services
 	mailer := service.NewMailer(cfg)
 	accounts := service.NewAccountService(users, emailCodes, mailer, loginAttempts, settings, resets, cfg.PublicURL, cfg.JWTSecret)
-	authH := handler.NewAuthHandler(accounts, cfg.CookieSecure)
+	authH := handler.NewAuthHandler(accounts, cfg.CookieSecure, cfg.CookieDomain)
 	authMw := middleware.Auth(accounts) // *service.AccountService 满足窄接口 Authenticator
 
 	// 限流：认证类公开端点 IP 10/min（主仓库同款；多实例共享配额可换 Redis 实现）
